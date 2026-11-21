@@ -580,10 +580,16 @@ _MIMOCODE_MEMBERS: dict[str, tuple[str, object, str, str]] = {
     ),
 }
 
-#: ``KimiAcpClient``'s own members: the ``AcpClient`` hook it fills, bound from the Kimi
+#: ``KimiAcpClient``'s own members: the ``AcpClient`` hooks it fills, bound from the Kimi
 #: Code owner.
 _KIMI_MEMBERS: dict[str, tuple[str, object, str, str]] = {
     "_note_harness_adapter_version": (
+        "function",
+        False,
+        "b60c5fea256e",
+        "client_kimi_session",
+    ),
+    "_refuse_harness_default_model": (
         "function",
         False,
         "b60c5fea256e",

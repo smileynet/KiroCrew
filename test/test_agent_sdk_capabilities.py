@@ -748,7 +748,11 @@ def test_a_harness_with_unasked_tools_is_trusted_with_no_permission_side_refusal
     unasked = sdk_backends.ACP_BACKENDS_UNASKED_NATIVE_TOOLS
     assert not unasked & sdk_backends.ACP_BACKENDS_HONOR_ZERO_TOOL_BAN
     assert not unasked & sdk_backends.ACP_BACKENDS_CREW_FIRES_SPEC_HOOKS
-    assert unasked == {sdk_backends.ACP_BACKEND_ANTIGRAVITY, sdk_backends.ACP_BACKEND_MIMOCODE}
+    assert unasked == {
+        sdk_backends.ACP_BACKEND_ANTIGRAVITY,
+        sdk_backends.ACP_BACKEND_KIMI,
+        sdk_backends.ACP_BACKEND_MIMOCODE,
+    }
 
 
 def test_the_knowledge_pool_client_takes_the_default_backend() -> None:

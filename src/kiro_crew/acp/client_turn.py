@@ -22,7 +22,7 @@ Instance fields written: ``_active_run_id``, ``_active_tool_calls``,
 
 Instance fields read: ``_agent_accepts_image``, ``_batch_window``, ``_buffer``,
 ``_copilot_ambiguous_mcp_calls``, ``_copilot_unmatched_titles``, ``_engine_fallback``,
-``_last_activity``, ``_liveness_oracle``, ``_permission_gate_events``, ``_pid``,
+``_kimi_fs``, ``_last_activity``, ``_liveness_oracle``, ``_permission_gate_events``, ``_pid``,
 ``_process``, ``_registered_session``, ``_sel_settled_tool_calls``, ``_sent_images``, ``_session_id``,
 ``_session_key``, ``_steer_turn``, ``_turn_clock``, ``_turn_lock``.
 """
@@ -1078,6 +1078,10 @@ async def _dispatch_events(
     # Clear stale permission options so an aborted/cancelled request from
     # a prior turn cannot leak into this one (memory + correctness).
     self._permission_options.clear()
+    # A Kimi write approved in an earlier turn pays for nothing in this one.
+    kimi_fs = getattr(self, "_kimi_fs", None)
+    if kimi_fs is not None:
+        kimi_fs.new_turn()
     getattr(self, "_permission_gate_events", {}).clear()
     # An elicitation the last turn left unanswered is cancelled on the wire,
     # not just forgotten: the engine holds its tool call open until then.

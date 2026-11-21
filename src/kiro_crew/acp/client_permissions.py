@@ -22,7 +22,7 @@ Instance fields read: ``_acp_config_options``, ``_agent``,
 ``_tool_call_harness_tool_name``, ``_tool_call_identity_unreadable``,
 ``_tool_call_input_redacted``, ``_tool_call_inputs``, ``_tool_call_is_shell``,
 ``_tool_call_mcp_server``, ``_tool_call_params``, ``_tool_call_tool_name``,
-``_tool_call_unclassified``, ``_unasked_shell_tripwire``.
+``_tool_call_unclassified``, ``_unasked_shell_tripwire``, ``_work_dir``.
 """
 
 from __future__ import annotations
@@ -50,10 +50,18 @@ from kiro_crew.acp._dispatch import (
 )
 from kiro_crew.acp.harness import pi as pi_mod
 from kiro_crew.acp.harness.copilot import COPILOT_IDENTITY_OVERFLOW
+from kiro_crew.acp.harness.kimi_fs import (
+    KIMI_FS_METHODS,
+    KIMI_OPTION_APPROVE_ALWAYS,
+    KIMI_OPTION_APPROVE_ONCE,
+    answer_fs_request,
+    kimi_fs_gate,
+)
 from kiro_crew.acp.harness_tool_names import HARNESS_UNASKED_TOOL_IDS, mimocode_actor_asks_nothing
 from kiro_crew.acp.transport_errors import AcpError, AcpToolGateUnroutable
 from kiro_crew.acp.types import (
     ACP_BACKEND_KAS,
+    ACP_BACKEND_KIMI,
     ACP_BACKEND_MIMOCODE,
     ACP_BACKENDS_SESSION_MCP_ARRAY,
     JSONRPC_METHOD_NOT_FOUND,
@@ -359,6 +367,9 @@ async def approve_tool(
         resolved_id = (recorded or {}).get("always" if always else "once")
         if resolved_id is None:
             resolved_id = OPTION_ALLOW_ALWAYS if always else OPTION_ALLOW_ONCE
+    if self.backend == ACP_BACKEND_KIMI and resolved_id == KIMI_OPTION_APPROVE_ALWAYS:
+        # A caller naming Kimi's own id for it (the event no longer offers it) gets the once id.
+        resolved_id = KIMI_OPTION_APPROVE_ONCE
     if once_only:
         # Copilot CLI's allow-always stops it asking about that tool for the rest
         # of the session, so every later call -- each later file of a patch
@@ -398,6 +409,9 @@ async def approve_tool(
             **recheck,
         )
         sent = True
+        if self.backend == ACP_BACKEND_KIMI:
+            # The approval now pays for one ``fs/write_text_file`` of the path it named.
+            kimi_fs_gate(self).approve(request_id)
     except GrantEnded:
         # Nothing was written: put the request back exactly as it was.
         if gate_events is not None and gate_event is not None:
@@ -493,6 +507,8 @@ async def reject_tool(self: AcpClient, request_id: str | int, reason: str = "") 
     """
     recorded = self._permission_options.pop(request_id, None)
     gate_event = getattr(self, "_permission_gate_events", {}).pop(request_id, None)
+    if self.backend == ACP_BACKEND_KIMI:
+        kimi_fs_gate(self).drop(request_id)
     # A deny (or cancel) invalidates any mediated-secret grant minted for this
     # call id, so an approve-then-reject on the same id leaves nothing a reused id
     # could claim. By call id, not token: the deny path holds no mint token.
@@ -1354,6 +1370,10 @@ async def _reject_unknown_server_request(self: AcpClient, msg: JsonRpcMessage) -
     """
     if msg.id is None:
         return
+    if self.backend == ACP_BACKEND_KIMI and msg.method in KIMI_FS_METHODS:
+        # Kimi Code is the one harness Crew declares ``fs`` for (``harness.kimi_fs``).
+        await answer_fs_request(self, msg)
+        return
     logger.warning(
         "ACP: rejecting unknown server request: method=%s id=%s",
         _loggable_request_id(msg.method),
@@ -1403,6 +1423,8 @@ def _note_pi_gate_asked(self: AcpClient, msg: JsonRpcMessage) -> None:
     tool_call = params.get("toolCall")
     tool_call = tool_call if isinstance(tool_call, dict) else {}
     tool_call_id = ""
+    if self.backend == ACP_BACKEND_KIMI and msg.id is not None:
+        kimi_fs_gate(self).note_request(msg.id, params, str(self._work_dir))
     pi_nonce = getattr(self, "_pi_gate_nonce", "")
     if pi_nonce:
         envelope = gate_envelope(tool_call, pi_nonce)

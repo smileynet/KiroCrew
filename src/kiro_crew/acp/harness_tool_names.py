@@ -68,6 +68,7 @@ from kiro_crew.acp_backends import (
     ACP_BACKEND_CLAUDE,
     ACP_BACKEND_CODEX,
     ACP_BACKEND_GOOSE,
+    ACP_BACKEND_KIMI,
     ACP_BACKEND_MIMOCODE,
     ACP_BACKEND_OPENCODE,
     ACP_BACKEND_STRANDS,
@@ -347,6 +348,32 @@ HARNESS_UNASKED_TOOL_IDS: dict[str, frozenset[str]] = {
             *ANTIGRAVITY_TOOL_IDS_BY_KIRO_TOOL["fs_read"],
             *ANTIGRAVITY_TOOL_IDS_BY_KIRO_TOOL["grep"],
             *ANTIGRAVITY_TOOL_IDS_BY_KIRO_TOOL["glob"],
+        }
+    ),
+    # Kimi Code CLI 2.7.2 under Crew's own home (``acp.harness.kimi``): ``Write``, ``Edit`` and
+    # ``Read`` ask by rule, ``Bash`` asks by default, and ``WebSearch``, ``FetchURL``,
+    # ``ReadMediaFile``, ``Grep``, ``Glob`` and MCP tools are removed from the tool list. What
+    # still completes with no request is Kimi's own default-approve list
+    # (``permissionPolicy/policies/default-tool-approve.ts``) minus those: the row names only
+    # the tools of it that touch no file, start no process and reach no network. Left OUT, so
+    # each still ends the session when it runs unasked: ``Agent`` and ``AgentSwarm`` (a
+    # subagent's own calls carry no agent id and its plan-mode guard does not apply, so nothing
+    # shows every call it makes asks), ``NotifyUser`` (sends a notification), and
+    # ``CreateGoal``, ``SetGoalBudget``, ``UpdateGoal`` (write session state; only the getter
+    # reads). ``TaskStop``, ``CronCreate`` and ``CronDelete`` ask.
+    ACP_BACKEND_KIMI: frozenset(
+        {
+            "TodoList",
+            "SetTodoList",
+            "TaskList",
+            "TaskOutput",
+            "WaitFor",
+            "CronList",
+            "AskUserQuestion",
+            "ExitPlanMode",
+            "Skill",
+            "select_tools",
+            "GetGoal",
         }
     ),
 }

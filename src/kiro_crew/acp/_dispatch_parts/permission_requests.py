@@ -55,6 +55,7 @@ from kiro_crew.acp_backends import (
     ACP_BACKEND_CLAUDE,
     ACP_BACKEND_DEEPSEEK,
     ACP_BACKEND_GOOSE,
+    ACP_BACKEND_KIMI,
     ACP_BACKEND_PI,
     ACP_BACKEND_STRANDS,
 )
@@ -866,6 +867,13 @@ def build_permission_event(
             opt_label = ""
         if not isinstance(opt_kind, str):
             opt_kind = ""
+        if (
+            harness_backend == ACP_BACKEND_KIMI
+            and (opt_kind or _LEGACY_OPTION_KIND.get(opt_id.lower(), "")) == "allow_always"
+        ):
+            # Kimi's "approve for this session" is never offered or recorded: a saved approval
+            # skips its ask rules, survives a reload and is invisible to the tripwire.
+            continue
         options.append({"id": opt_id, "label": opt_label})
         if not opt_kind:
             opt_kind = _LEGACY_OPTION_KIND.get(opt_id.lower(), "")
@@ -879,7 +887,10 @@ def build_permission_event(
                 opt_kind = "reject_once"
         if opt_kind:
             kind_to_id.setdefault(opt_kind, opt_id)
-    if not options:
+    # Kimi always advertises a once option, so an empty list means none was readable; the
+    # canonical pair below would offer the always option it must never offer.
+    never_offers_always = harness_backend == ACP_BACKEND_KIMI
+    if not options and not never_offers_always:
         options = [
             {"id": OPTION_ALLOW_ONCE, "label": "Allow once"},
             {"id": OPTION_ALLOW_ALWAYS, "label": "Allow always"},

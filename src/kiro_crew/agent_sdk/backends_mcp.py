@@ -25,6 +25,7 @@ from kiro_crew.agent_sdk.backends import (
     ACP_BACKEND_DEEPSEEK,
     ACP_BACKEND_GOOSE,
     ACP_BACKEND_KAS,
+    ACP_BACKEND_KIMI,
     ACP_BACKEND_KIRO,
     ACP_BACKEND_MIMOCODE,
     ACP_BACKEND_OPENCODE,
@@ -337,7 +338,14 @@ ACP_BACKENDS_SPEC_SERVERS_OFF_WIRE = frozenset({ACP_BACKEND_KIRO, ACP_BACKEND_KA
 #: without a permission request
 #: (``test/fixtures/acp_frames/antigravity/turn-live-tools.jsonl``), and no mode
 #: makes them ask.
-ACP_BACKENDS_UNASKED_NATIVE_TOOLS = frozenset({ACP_BACKEND_ANTIGRAVITY, ACP_BACKEND_MIMOCODE})
+#:
+#: kimi: under Crew's own home (``acp.harness.kimi``) ``Write``, ``Edit``, ``Read`` and ``Bash``
+#: ask, but its tools that touch no file (the todo, task and cron lists, ``Skill``, ``GetGoal``,
+#: ...) are in Kimi's own default-approve list and run with no request
+#: (``HARNESS_UNASKED_TOOL_IDS``).
+ACP_BACKENDS_UNASKED_NATIVE_TOOLS = frozenset(
+    {ACP_BACKEND_ANTIGRAVITY, ACP_BACKEND_KIMI, ACP_BACKEND_MIMOCODE}
+)
 
 
 # Backends on which an agent spec's ``"tools": []`` is honoured as a total ban --

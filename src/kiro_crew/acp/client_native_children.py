@@ -73,6 +73,7 @@ from kiro_crew.acp.transport_framing import write_notification_best_effort
 from kiro_crew.acp.types import (
     ACP_BACKEND_CLAUDE,
     ACP_BACKEND_CODEX,
+    ACP_BACKEND_KIMI,
     ACP_BACKEND_OPENCODE,
     ACP_CLIENT_CAPABILITIES,
     EVENT_SUBAGENT_ACTIVITY,
@@ -126,6 +127,12 @@ CLAUDE_CLIENT_CAPABILITIES: dict = {
 CLIENT_CAPABILITIES_BY_BACKEND: dict[str, dict] = {
     ACP_BACKEND_CLAUDE: CLAUDE_CLIENT_CAPABILITIES,
     ACP_BACKEND_CODEX: {**ACP_CLIENT_CAPABILITIES, "session": {"compaction": {}}},
+    # Kimi Code is told Crew serves its text reads and writes (``acp.harness.kimi_fs``): the
+    # writes are then Crew's to approve a second time. ``terminal`` stays false.
+    ACP_BACKEND_KIMI: {
+        **ACP_CLIENT_CAPABILITIES,
+        "fs": {"readTextFile": True, "writeTextFile": True},
+    },
 }
 
 #: The longest JSON-RPC id of a child's request kept for its Stop; a longer one is not
