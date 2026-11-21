@@ -176,31 +176,22 @@ export function distinctChanges(changes: readonly LaunchChange[]): LaunchChange[
 }
 
 /**
- * Env keys set by a launch on this side whose command the other side does not
- * run, unless a launch the other side alone runs sets the same key to the same
- * value. Such a launch replaced one with another command, so its own keys are
- * a change for it even when the set of values across all launches is the same
- * (a launch that newly carries a loader preload another launch already had).
+ * Whether a merged env-key list per side can show a change without hiding one.
+ * The gateway orders each side by its own hash, so launches are never paired
+ * by list position. It is safe in two cases only:
+ * - `single`: one launch per side, so the pairing is the only one possible;
+ * - `same`: every launch on both sides sets the same pairs (compared as sets,
+ *   so order is irrelevant), so no key can have moved or changed.
+ * Anything else (several launches with different envs) returns `null`: the
+ * caller draws each launch with its own keys.
  */
-export function unmatchedKeys(
-  mine: { commands?: string[][]; envs?: string[][] },
-  other: { commands?: string[][]; envs?: string[][] },
-): Set<string> {
-  const cmds = (c?: string[][]) => new Set((c ?? []).map(x => JSON.stringify(x)))
-  const myCmds = cmds(mine.commands)
-  const otherCmds = cmds(other.commands)
-  const otherOnly = new Set(
-    (other.commands ?? []).flatMap((c, i) => (myCmds.has(JSON.stringify(c)) ? [] : (other.envs?.[i] ?? []))),
-  )
-  const out = new Set<string>()
-  ;(mine.commands ?? []).forEach((c, i) => {
-    if (otherCmds.has(JSON.stringify(c))) return
-    for (const pair of mine.envs?.[i] ?? []) {
-      const at = pair.indexOf('=')
-      if (at > 0 && !otherOnly.has(pair)) out.add(pair.slice(0, at))
-    }
-  })
-  return out
+export function mergedEnvRule(refusal: LaunchRefusal): 'single' | 'same' | null {
+  const before = (refusal.approved_commands ?? []).map((_, i) => refusal.approved_envs?.[i] ?? [])
+  const after = (refusal.commands ?? []).map((_, i) => refusal.envs?.[i] ?? [])
+  if (before.length === 1 && after.length === 1) return 'single'
+  const key = (env: readonly string[]) => JSON.stringify([...new Set(env)].sort())
+  const all = new Set([...before, ...after].map(key))
+  return all.size <= 1 ? 'same' : null
 }
 
 /**
