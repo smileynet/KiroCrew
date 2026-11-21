@@ -24,6 +24,7 @@ from kiro_crew.acp.runtime import AcpRuntime
 from kiro_crew.acp.session_provider import AcpSessionProvider
 from kiro_crew.acp.types import (
     ACP_BACKEND_ANTIGRAVITY,
+    ACP_BACKEND_KIMI,
     ACP_BACKEND_CLAUDE,
     ACP_BACKEND_CODEX,
     ACP_BACKEND_GOOSE,
@@ -111,8 +112,8 @@ class TestBackendPredicates:
             provider.is_copilot_backend,
             provider.is_strands_backend,
         ]
-        # Antigravity has no predicate: nothing reads one, so it holds none.
-        assert sum(held) == (0 if backend == ACP_BACKEND_ANTIGRAVITY else 1)
+        # Antigravity and Kimi have no predicate: nothing reads one, so they hold none.
+        assert sum(held) == (0 if backend in {ACP_BACKEND_ANTIGRAVITY, ACP_BACKEND_KIMI} else 1)
 
     @pytest.mark.parametrize("backend", sorted(ACP_BACKENDS_KNOWN))
     def test_acp_runtime_backend_answers_positive_set_membership(self, backend):

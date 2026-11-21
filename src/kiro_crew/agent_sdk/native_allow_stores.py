@@ -27,6 +27,7 @@ from kiro_crew.agent_sdk.backends import (
     ACP_BACKEND_DEEPSEEK,
     ACP_BACKEND_GOOSE,
     ACP_BACKEND_KAS,
+    ACP_BACKEND_KIMI,
     ACP_BACKEND_KIRO,
     ACP_BACKEND_MIMOCODE,
     ACP_BACKEND_OPENCODE,
@@ -118,6 +119,11 @@ NATIVE_ALLOW_STORES_NONE: Mapping[str, str] = {
     "~/.kiro/workspace-roots, are fenced by name in security.paths_lists",
     ACP_BACKEND_KAS: "it runs kiro-cli's engine and reads the same stores as kiro, "
     "the permissions rule files included",
+    ACP_BACKEND_KIMI: "Kiro Crew runs Kimi out of its own KIMI_CODE_HOME (<crew data>/kimi-home), "
+    "not ~/.kimi-code: its config.toml is rewritten at every spawn, the session approval "
+    "history under sessions/ is never written because Crew never answers approve_always, and "
+    "the agent's Write and Edit under that home are denied by rule and refused by the "
+    "read-gate floor",
     ACP_BACKEND_DEEPSEEK: "no on-disk allow list is known; every call goes through "
     "Crew's gate extension",
     ACP_BACKEND_STRANDS: "in the Python-project ACP mode Crew runs, the CLI consults "

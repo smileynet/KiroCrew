@@ -1681,6 +1681,10 @@ def test_a_missing_self_served_binary_names_its_install_command(
     monkeypatch.delenv(launch.bin_env_var, raising=False)
     monkeypatch.setattr(acp_client, "_mise_which", lambda _name: None)
     monkeypatch.setattr(acp_client, "augmented_path", lambda _path: str(empty))
+    # A record's ``install_dirs`` sit under the home (Kimi's ``~/.kimi-code/bin``), so a host
+    # with the harness installed there would resolve it: point the home at an empty dir.
+    monkeypatch.setenv("HOME", str(tmp_path / "home"))
+    monkeypatch.setenv("USERPROFILE", str(tmp_path / "home"))
     # ``tmp_path`` is its own repo, so the Copilot config walk stops there, not in the
     # host's home, where a real ``.mcp.json`` would refuse the spawn.
     (tmp_path / ".git").mkdir()

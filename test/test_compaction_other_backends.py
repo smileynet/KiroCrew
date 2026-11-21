@@ -52,6 +52,7 @@ from kiro_crew.acp.session_provider import AcpSessionProvider
 from kiro_crew.acp.types import STOP_REASON_END_TURN
 from kiro_crew.acp_backends import (
     ACP_BACKEND_ANTIGRAVITY,
+    ACP_BACKEND_KIMI,
     ACP_BACKEND_CLAUDE,
     ACP_BACKEND_COPILOT,
     ACP_BACKEND_DEEPSEEK,
@@ -275,7 +276,11 @@ class TestEveryKnownBackendIsClassified:
     #:
     #: ``antigravity``: Antigravity 1.4.4 has no verified manual-compaction command
     #: or status frame; declining is safer than claiming Crew can compact it.
-    UNCLASSIFIED: frozenset = frozenset({"strands", ACP_BACKEND_ANTIGRAVITY})
+    #:
+    #: ``kimi``: Kimi Code CLI 2.7.2 answers a prompt ``/compact`` by starting a compaction
+    #: in the background (``reports/kimi-captures.md``), but no completion frame was
+    #: captured, so neither Crew-driven nor harness-managed compaction is claimed.
+    UNCLASSIFIED: frozenset = frozenset({"strands", ACP_BACKEND_ANTIGRAVITY, ACP_BACKEND_KIMI})
 
     def test_every_known_backend_is_classified_or_listed(self) -> None:
         classified = (
