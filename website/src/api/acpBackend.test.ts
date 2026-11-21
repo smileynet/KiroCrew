@@ -172,6 +172,11 @@ describe('acpBackendName / acpBackendShortName', () => {
     expect(acpBackendName({ id: 'antigravity' })).toBe('Google Antigravity')
     expect(acpBackendShortName('antigravity')).toBe('Google Antigravity')
   })
+
+  it('names the Kimi harness by its product name, not its raw id', () => {
+    expect(acpBackendName({ id: 'kimi' })).toBe('Kimi Code CLI')
+    expect(acpBackendShortName('kimi')).toBe('Kimi Code CLI')
+  })
 })
 
 describe('kasInUse', () => {

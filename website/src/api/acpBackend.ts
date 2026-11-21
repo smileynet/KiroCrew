@@ -123,6 +123,7 @@ export function acpBackendName(backend: { id: string; policy_id?: string }): str
     case 'copilot': return i18nT('pages.developer.agentBackendTab.copilot')
     case 'deepseek': return i18nT('pages.developer.agentBackendTab.deepseek')
     case 'goose': return i18nT('pages.developer.agentBackendTab.goose')
+    case 'kimi': return i18nT('pages.developer.agentBackendTab.kimi')
     case 'mimocode': return i18nT('pages.developer.agentBackendTab.mimocode')
     case 'opencode': return i18nT('pages.developer.agentBackendTab.opencode')
     case 'pi': return i18nT('pages.developer.agentBackendTab.pi')
