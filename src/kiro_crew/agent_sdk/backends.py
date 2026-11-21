@@ -519,6 +519,13 @@ ACP_BACKEND_MIMOCODE = "mimocode"
 # launcher and its sibling ``localharness_external`` helper, so its probe and spawn
 # resolution live beside the adapter rather than in the one-binary launch table.
 ACP_BACKEND_ANTIGRAVITY = "antigravity"
+# Moonshot's Kimi Code CLI (npm ``@moonshot-ai/kimi-code``, command ``kimi``): a single
+# binary that serves ACP itself (``kimi acp``). NOT the archived Python ``kimi-cli``,
+# which also installs a ``kimi`` command and also answers ``kimi acp``; the handshake
+# tells them apart by ``agentInfo.name``. DORMANT: it can be spelled and launched but
+# is not in ``BASELINE_SELECTABLE_BACKENDS`` until its live captures exist (see the
+# Kimi worked example in docs/system-specs/modules/harness-onboarding.md).
+ACP_BACKEND_KIMI = "kimi"
 # The kiro-cli backend is spelled as the empty string throughout, so name it
 # rather than leaving every call site to infer it from "not claude".
 ACP_BACKEND_KIRO = ""
@@ -567,6 +574,7 @@ ACP_BACKENDS_KNOWN: FrozenSet[str] = frozenset(
         ACP_BACKEND_COPILOT,
         ACP_BACKEND_MIMOCODE,
         ACP_BACKEND_ANTIGRAVITY,
+        ACP_BACKEND_KIMI,
     }
 )
 
@@ -766,6 +774,7 @@ POLICY_ID_BY_BACKEND: dict = {
     ACP_BACKEND_COPILOT: ACP_BACKEND_COPILOT,
     ACP_BACKEND_MIMOCODE: ACP_BACKEND_MIMOCODE,
     ACP_BACKEND_ANTIGRAVITY: ACP_BACKEND_ANTIGRAVITY,
+    ACP_BACKEND_KIMI: ACP_BACKEND_KIMI,
 }
 
 #: The backend a deployment policy may never deny.

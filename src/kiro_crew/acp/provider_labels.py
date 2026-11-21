@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from kiro_crew.acp_backends import (
     ACP_BACKEND_ANTIGRAVITY,
+    ACP_BACKEND_KIMI,
     ACP_BACKEND_CLAUDE,
     ACP_BACKEND_CODEX,
     ACP_BACKEND_COPILOT,
@@ -40,6 +41,7 @@ PROVIDER_LABEL_COPILOT = "copilot"
 PROVIDER_LABEL_STRANDS = "strands"
 PROVIDER_LABEL_MIMOCODE = "mimocode"
 PROVIDER_LABEL_ANTIGRAVITY = "antigravity"
+PROVIDER_LABEL_KIMI = "kimi"
 
 #: Backend id -> its label. The mapping is what ``provider_label`` resolves
 #: through, so a harness's label and the answer a session persists under are one
@@ -63,4 +65,5 @@ PROVIDER_LABEL_BY_BACKEND: dict = {
     ACP_BACKEND_DEEPSEEK: PROVIDER_LABEL_DEEPSEEK,
     ACP_BACKEND_COPILOT: PROVIDER_LABEL_COPILOT,
     ACP_BACKEND_ANTIGRAVITY: PROVIDER_LABEL_ANTIGRAVITY,
+    ACP_BACKEND_KIMI: PROVIDER_LABEL_KIMI,
 }

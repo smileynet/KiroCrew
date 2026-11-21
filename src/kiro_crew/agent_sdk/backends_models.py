@@ -21,6 +21,7 @@ from typing import FrozenSet, Mapping
 
 from kiro_crew.agent_sdk.backends import (
     ACP_BACKEND_ANTIGRAVITY,
+    ACP_BACKEND_KIMI,
     ACP_BACKEND_CLAUDE,
     ACP_BACKEND_CODEX,
     ACP_BACKEND_COPILOT,
@@ -731,6 +732,9 @@ _MODEL_REGISTRY_NAMESPACE_BY_BACKEND: dict = {
     # Bedrock ids) the Strands CLI resolves, a vocabulary no other harness serves.
     ACP_BACKEND_STRANDS: "strands",
     ACP_BACKEND_ANTIGRAVITY: "antigravity",
+    # kimi gets its own key: Kimi Code's model ids are its own provider catalog
+    # (``[providers.*]`` in its config), which no other harness serves.
+    ACP_BACKEND_KIMI: "kimi",
 }
 
 

@@ -11,6 +11,7 @@ import pytest
 
 from kiro_crew.acp_backends import (
     ACP_BACKEND_ANTIGRAVITY,
+    ACP_BACKEND_KIMI,
     ACP_BACKEND_CLAUDE,
     ACP_BACKEND_CODEX,
     ACP_BACKEND_COPILOT,
@@ -33,9 +34,14 @@ FIELD = "agent.acp_backend"
 #: Known ids the public baseline deliberately does not offer, each entry carrying its
 #: reason in ``test_baseline_ships_every_known_backend``. An entry is a reasoned
 #: exclusion rather than a defect, and it earns its place by naming what the id fails.
-#: Empty: an id whose tool calls bypass the PreToolUse gate stays out until its
-#: routing is verified (e.g. ``Routing.VERIFIED_GATE_EXTENSION``).
-NOT_SHIPPED_SELECTABLE: frozenset = frozenset()
+#: An id whose tool calls bypass the PreToolUse gate stays out until its routing is
+#: verified (e.g. ``Routing.VERIFIED_GATE_EXTENSION``).
+#:
+#: ``ACP_BACKEND_KIMI``: dormant. Stages 1-6 are done, but its permission mode id,
+#: capability sets and signed-out text need a live ``kimi acp`` capture that does not
+#: exist yet (the Kimi worked example in harness-onboarding.md lists each
+#: ``pending capture`` decision), and the MCP projection (Stage 7) is undecided.
+NOT_SHIPPED_SELECTABLE: frozenset = frozenset({ACP_BACKEND_KIMI})
 
 
 @pytest.fixture

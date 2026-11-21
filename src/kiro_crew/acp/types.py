@@ -18,6 +18,7 @@ from kiro_crew.acp.provider_labels import (  # noqa: F401 - re-exported for exis
     PROVIDER_LABEL_DEFAULT,
     PROVIDER_LABEL_GOOSE,
     PROVIDER_LABEL_KAS,
+    PROVIDER_LABEL_KIMI,
     PROVIDER_LABEL_MIMOCODE,
     PROVIDER_LABEL_OPENCODE,
     PROVIDER_LABEL_PI,
@@ -40,6 +41,7 @@ from kiro_crew.acp.steering_wire import (  # noqa: F401
 # unchanged — see the "ACP Backend Identifiers" section below for why they moved.
 from kiro_crew.acp_backends import (  # noqa: F401 - re-exported for existing importers
     ACP_BACKEND_ANTIGRAVITY,
+    ACP_BACKEND_KIMI,
     ACP_BACKEND_CLAUDE,
     ACP_BACKEND_CODEX,
     ACP_BACKEND_COPILOT,
