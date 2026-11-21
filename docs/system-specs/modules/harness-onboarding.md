@@ -708,6 +708,31 @@ list. The only way to give Kimi a config is `KIMI_CODE_HOME`, so Crew owns one.
 | Tripwire | A `HARNESS_UNASKED_TOOL_IDS` row: `TodoList`, `SetTodoList`, `TaskList`, `TaskOutput`, `WaitFor`, `CronList`, `AskUserQuestion`, `ExitPlanMode`, `Skill`, `select_tools`, `GetGoal`. `Agent` and `AgentSwarm` stay out: a subagent's calls carry no agent id and nothing shows every one of them asks, so a model that delegates ends the session. |
 | Not passed | `additionalDirectories` and `mcpServers`. |
 
+### Stage 7 finding: the array mounts, the model does not see it
+
+Driven on 2.7.2 with Crew's own home, `mcp__*` taken out of `[tools] disabled` for the run,
+and the array `providers/mirrors` would build (`kirocrew-core` and `kirocrew-cron`):
+
+- `/mcp` answered `kirocrew-core (stdio): connected, 85 tools`, and the session's
+  `wire.jsonl` records `mcp.tools_discovered` for both servers.
+- The model's tool list (`llm.tools_snapshot`, and `toolCount=21` in the session log)
+  held only built-ins, and the model replied that no MCP tool was available. Same result
+  after a 12 s wait before the prompt, and with `KIMI_CODE_EXPERIMENTAL_TOOL_SELECT=1`
+  (that adds `select_tools`, but announces nothing loadable).
+- The cause is ordering. The echo server of `kimi/turn-live-permission-mcp` connects in
+  about 100 ms, before `profile.bind`, and its tool is offered. `kirocrew-core` needs
+  about 1 s, connects after `profile.bind`, and its tools are not. In one run with both,
+  only the echo server's discovery came before the bind.
+
+So a `mirror` would deliver servers the model cannot call: the defect `PROJECTIONS`
+exists to stop. The channel named in the declaration is the array once one of these
+holds: Kimi offers tools of a server that connects after the bind, or Crew's servers
+connect before it. MCP calls ask on Kimi (they are outside its default-approve list, see
+`kimi/turn-live-permission-mcp`), and Crew strips `approve_always` on every request, so
+neither needs changing when the channel opens. Captures:
+`~/kimi-captures/custom_s7mcp*.jsonl` on the recording host; the mirror draft and diff are
+in `reports/kimi-stage7-8.md`.
+
 Two things this run produced that the checklist did not ask for.
 
 The first is a protocol divergence that turned out not to be one. This harness
@@ -1228,7 +1253,8 @@ named there is `pending capture`.
 | 5 auth declaration | Done: `own_credential_file`; `.kimi-code/credentials`, `config.toml`, `logs`, `sessions`, `oauth`, `device_id` and `user-history` on the floor, re-anchored under `KIMI_CODE_HOME`, all seven masked from the child (it runs out of the Crew-owned home instead; `kimi-home` is on the floor and excluded from Kimi's mask alone). The floor names directories, so `sessions/*/wire.jsonl` is fenced as the whole `sessions` directory. `signed_out_signature` is empty (pending capture). Host-contract column added. |
 | 6 install probe | Done from the launch row. The release is read from the npm manifest and a `kimi` that is not `2.7.2` is reported missing with the pinned command. A build with no manifest (the legacy Python install) reads as unknown and is refused at the handshake. |
 | Routing | `Routing.SESSION_CONFIG`, `("mode", "default")`. Forbidden modes `yolo` and `auto`. The prompt-command allowlist admits compact, help, mcp, status, tasks and usage, so `/yolo`, `/auto`, `/login`, `/goal` and every skill command are refused before the wire. Crew writes the pin with `session/set_config_option` and never calls `session/set_mode`: Kimi 2.7.2's handler runs the same `setMode` with no early return, so it also corrects a `yolo` config that `session/new` reports as `default` (`turn-live-yolo-config`). |
-| 7 selectability | **Not taken.** The MCP projection is declared `no-channel` (the launch adds nothing to the session array), so Crew's own tools are absent from a Kimi session. |
+| 7 selectability | **Not taken, measured.** The MCP projection stays `no-channel`: the session array was driven live with Crew's own servers and they connect, but their tools never reach Kimi's model (below). Selectability is also blocked by the open review rows N4 and N6 and by the Pending-capture rows, none of which is accepted here. |
+| 8 live spill | Partial, dormant. Usage rows are counted (`usage_store._SHARD_COUNTED_HARNESSES`), the dashboard names the harness in all locales (`website/src/api/acpBackend.ts`), and Kimi has a column in every bucket of `agent-host-contract.md`. `session_pid_harness.py` already recognises `node .../bin/kimi acp` through the registry's `kimi` marker on POSIX. Not done because it is not selectable: `configuration.md` and `agent-spec-fields.md` do not list it, since both describe values an operator can set. |
 
 ### Pending capture
 
@@ -1237,7 +1263,7 @@ is decided by a measurement that does not exist yet. Until it does, Kimi stays o
 
 | Decision | Why it waits | Where the TODO sits |
 |---|---|---|
-| `ACP_BACKENDS_SESSION_MCP_ARRAY`, `ACP_BACKENDS_PRUNE_UNSTARTABLE_MCP`, the MCP projection kind | no stdio server was observed mounted and called | `providers/mirrors/registry.py` |
+| `ACP_BACKENDS_SESSION_MCP_ARRAY`, `ACP_BACKENDS_PRUNE_UNSTARTABLE_MCP`, the MCP projection kind | measured on 2.7.2 and still `no-channel`: a server that connects after the session's profile is bound is not offered to the model (Stage 7 finding below) | `providers/mirrors/registry.py` |
 | ~~`ACP_BACKENDS_UNASKED_NATIVE_TOOLS` and the `HARNESS_UNASKED_TOOL_IDS` row~~ | Decided by Option B below: a member, with a row of read-only tools only | `acp/harness_tool_names.py` |
 | `ACP_BACKENDS_HONOR_ZERO_TOOL_BAN`, `ACP_BACKENDS_SIDE_READONLY` | follow from the unasked-tools answer | n/a |
 | `ACP_BACKENDS_COMPACT`, `INLINE_COMPACTION`, `HARNESS_MANAGED_COMPACTION`, `ACP_BACKEND_PROMPT_HANDLER_COMMANDS` | `/compact` is advertised; no compaction was driven | `agent_sdk/backends_routing.py` |

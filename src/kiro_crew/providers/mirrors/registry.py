@@ -429,13 +429,13 @@ PROJECTIONS: dict[str, McpProjection] = {
     ),
     ACP_BACKEND_KIMI: McpProjection(
         kind=ProjectionKind.NO_CHANNEL,
-        reason="Dormant (Stage 7 not taken): the Kimi launch adds nothing to the session's "
-        "mcpServers array, so a Kimi session holds none of Crew's MCP servers. Kimi Code "
-        "CLI's ACP docs say session/new accepts http, sse and stdio elements and discards "
-        "an `acp` one, but no stdio server has been observed mounted and called, and "
-        "whether a project or user mcp.json outranks the array is unmeasured",
-        channel="the session/new mcpServers array (http, sse and stdio per the kimi acp "
-        "reference), once a capture shows a stdio element mounted, listed and called",
+        reason="Dormant: the Kimi launch adds nothing to the session's mcpServers array, so a "
+        "Kimi session holds none of Crew's MCP servers. Measured on 2.7.2: the array mounts "
+        "Crew's own servers (/mcp lists kirocrew-core connected, 85 tools), but a server that "
+        "connects after the session's profile is bound is left out of the model's tool list, "
+        "and kirocrew-core connected about 1 s after it in every run measured",
+        channel="the session/new mcpServers array, once Kimi offers the tools of a server "
+        "that connects after the profile bind, or Crew's servers connect before it",
         tracking="docs/system-specs/modules/harness-onboarding.md#worked-example-kimi",
     ),
     ACP_BACKEND_MIMOCODE: McpProjection(
