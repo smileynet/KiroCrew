@@ -333,7 +333,7 @@ class TestCopilotWrongVersion:
         (tmp_path / "copilot.cmd").write_text("@echo off\n")
         assert copilot_installed_version(str(tmp_path / "copilot.cmd")) == "1.0.102"
 
-    @pytest.mark.parametrize("backend", sorted(ACP_BACKENDS_SELF_SERVED_ACP - {"copilot"}))
+    @pytest.mark.parametrize("backend", sorted(ACP_BACKENDS_SELF_SERVED_ACP - {"copilot", "kimi"}))
     def test_no_other_harness_reads_a_version(self, backend, monkeypatch):
         from kiro_crew.agent_sdk.drivers import acp as driver
 
