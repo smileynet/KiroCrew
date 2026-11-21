@@ -1,0 +1,733 @@
+[
+  {
+    "config_options": [
+      {
+        "category": "model",
+        "currentValue": "kimi-code/kimi-for-coding",
+        "id": "model",
+        "name": "Model",
+        "options": [
+          {
+            "name": "K2.8 Preview",
+            "value": "kimi-code/kimi-for-coding"
+          }
+        ],
+        "type": "select"
+      },
+      {
+        "category": "thought_level",
+        "currentValue": "max",
+        "id": "thinking",
+        "name": "Thinking",
+        "options": [
+          {
+            "name": "Thinking Low",
+            "value": "low"
+          },
+          {
+            "name": "Thinking High",
+            "value": "high"
+          },
+          {
+            "name": "Thinking Max",
+            "value": "max"
+          }
+        ],
+        "type": "select"
+      },
+      {
+        "category": "mode",
+        "currentValue": "default",
+        "id": "mode",
+        "name": "Mode",
+        "options": [
+          {
+            "description": "Manual approvals; tools execute normally.",
+            "name": "Default",
+            "value": "default"
+          },
+          {
+            "description": "Read-only planning; no tool execution.",
+            "name": "Plan",
+            "value": "plan"
+          },
+          {
+            "description": "Auto-approve safe operations.",
+            "name": "Auto",
+            "value": "auto"
+          },
+          {
+            "description": "Auto-approve everything.",
+            "name": "YOLO",
+            "value": "yolo"
+          }
+        ],
+        "type": "select"
+      }
+    ],
+    "frame": "response",
+    "id": 2,
+    "modes": {
+      "advertised": true,
+      "current": "default",
+      "ids": [
+        "default",
+        "plan",
+        "auto",
+        "yolo"
+      ]
+    },
+    "session_id": "kimi-session-1"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "is_shell": true,
+        "kind": "tool_call",
+        "title": "Bash",
+        "tool_call_id": "0:tool-1",
+        "tool_kind": "execute",
+        "wire_title": "Bash"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "0:tool-1",
+        "tool_output": "{\"command\":\"",
+        "tool_output_bytes": 12,
+        "tool_output_digest": "987afbaaefb04d33526ed3164d16878c3e8a0b060709b754e32dfd79f94bdb6c",
+        "tool_status": "in_progress"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "0:tool-1",
+        "tool_output": "{\"command\":\"echo",
+        "tool_output_bytes": 16,
+        "tool_output_digest": "c01934fa12c275f902a8e5dc346d711c80597029ef6d51e909bea63305eaeca7",
+        "tool_status": "in_progress"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "0:tool-1",
+        "tool_output": "{\"command\":\"echo y",
+        "tool_output_bytes": 18,
+        "tool_output_digest": "e6fe8755b1a7c6c742d14bbebc1c678743d8ede12f7af81a8550047fc92e13f6",
+        "tool_status": "in_progress"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "0:tool-1",
+        "tool_output": "{\"command\":\"echo yolo",
+        "tool_output_bytes": 21,
+        "tool_output_digest": "084a5c92e622f2cf46f697c18021b4a53b40426c32acce72feb076fd4f95c518",
+        "tool_status": "in_progress"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "0:tool-1",
+        "tool_output": "{\"command\":\"echo yolo >",
+        "tool_output_bytes": 23,
+        "tool_output_digest": "3d032e7e1a1be36f18a4195aaba15491ed2348b5a79bdd4b2e80150973df7699",
+        "tool_status": "in_progress"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "0:tool-1",
+        "tool_output": "{\"command\":\"echo yolo > g",
+        "tool_output_bytes": 25,
+        "tool_output_digest": "1a77c964009f4867926401112f0026782453fd50ed61ab50e05ef6d8c3ef5599",
+        "tool_status": "in_progress"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "0:tool-1",
+        "tool_output": "{\"command\":\"echo yolo > g.txt",
+        "tool_output_bytes": 29,
+        "tool_output_digest": "052bbf45ade27d81ec543714e0dd49b7af8d8dca2e0c9f7b7d601e230353c2b2",
+        "tool_status": "in_progress"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "0:tool-1",
+        "tool_output": "{\"command\":\"echo yolo > g.txt\"",
+        "tool_output_bytes": 30,
+        "tool_output_digest": "b94abc800e4e04a77bec45304aff863499021941e2291978883b10514a7569a0",
+        "tool_status": "in_progress"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "0:tool-1",
+        "tool_output": "{\"command\":\"echo yolo > g.txt\"}",
+        "tool_output_bytes": 31,
+        "tool_output_digest": "6c5f87a05c7bc14f89479d1f3cf00150da4cd7009b6f42483075a57ed95f2a43",
+        "tool_status": "in_progress"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "0:tool-1",
+        "tool_output": "{\"command\":\"echo yolo > g.txt\"}",
+        "tool_output_bytes": 31,
+        "tool_output_digest": "6c5f87a05c7bc14f89479d1f3cf00150da4cd7009b6f42483075a57ed95f2a43",
+        "tool_status": "in_progress"
+      },
+      {
+        "is_shell": true,
+        "kind": "tool_call_update",
+        "raw_tool_params": {
+          "command": "echo yolo > g.txt"
+        },
+        "title": "echo yolo > g.txt",
+        "tool_call_id": "0:tool-1",
+        "tool_input": "{\n  \"command\": \"echo yolo > g.txt\"\n}",
+        "tool_kind": "execute",
+        "wire_title": "Running: echo yolo > g.txt"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "0:tool-1",
+        "tool_final": true,
+        "tool_output": "Command executed successfully.",
+        "tool_output_bytes": 30,
+        "tool_output_digest": "3988564dff1cdd1cd387a48c0a0932a6ede55f52a5bdad2c622b9b2ca99a3e2a",
+        "tool_status": "completed"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_call",
+        "title": "Write",
+        "tool_call_id": "1:tool-2",
+        "tool_kind": "edit",
+        "wire_title": "Write"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "1:tool-2",
+        "tool_output": "{\"path\":\"",
+        "tool_output_bytes": 9,
+        "tool_output_digest": "fbfbfcd4e45a93e0b338500eb9222da942c603c3a3ce1bfa696a632224b801d3",
+        "tool_status": "in_progress"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "1:tool-2",
+        "tool_output": "{\"path\":\"f",
+        "tool_output_bytes": 10,
+        "tool_output_digest": "d41e13cdbe95ff20eff20f8d0091909038541e0795e144540ec432271fe97147",
+        "tool_status": "in_progress"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "1:tool-2",
+        "tool_output": "{\"path\":\"f.txt",
+        "tool_output_bytes": 14,
+        "tool_output_digest": "53abe049bc923d2f2a8e944bdd747368e90177e38ae0f1a2026a3630b3f17ced",
+        "tool_status": "in_progress"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "1:tool-2",
+        "tool_output": "{\"path\":\"f.txt\"",
+        "tool_output_bytes": 15,
+        "tool_output_digest": "8ef9abb19c3bf9aa0be1838b192dd4490b08926cd0bf4cfbf63a2661c078ca86",
+        "tool_status": "in_progress"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "1:tool-2",
+        "tool_output": "{\"path\":\"f.txt\",\"content\":\"",
+        "tool_output_bytes": 27,
+        "tool_output_digest": "2d6399da480bdf4b1e879cf39c502bde1a76298471e7ce653c48a1688b596210",
+        "tool_status": "in_progress"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "1:tool-2",
+        "tool_output": "{\"path\":\"f.txt\",\"content\":\"z",
+        "tool_output_bytes": 28,
+        "tool_output_digest": "c74576fe2c5b43338cdedb6e667b3912055f14b30f967c1beb5bc51633977d13",
+        "tool_status": "in_progress"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "1:tool-2",
+        "tool_output": "{\"path\":\"f.txt\",\"content\":\"z\\n",
+        "tool_output_bytes": 30,
+        "tool_output_digest": "55a238074b08b81ef508336922c3e917b894b66c961d7d8e7d17da2f500c16eb",
+        "tool_status": "in_progress"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "1:tool-2",
+        "tool_output": "{\"path\":\"f.txt\",\"content\":\"z\\n\"",
+        "tool_output_bytes": 31,
+        "tool_output_digest": "f382e7752267ff029c927a705eea56f2a01eb2d82c9b9e79206e56ffdf1d2bcc",
+        "tool_status": "in_progress"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "1:tool-2",
+        "tool_output": "{\"path\":\"f.txt\",\"content\":\"z\\n\"}",
+        "tool_output_bytes": 32,
+        "tool_output_digest": "e8805bf901a2f131e4b1f7b163be78cd75553a9300dd77cc67987cadc20eacde",
+        "tool_status": "in_progress"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "permission",
+    "events": [
+      {
+        "kind": "permission_request",
+        "mcp_identity_trusted": true,
+        "options": [
+          {
+            "id": "approve_once",
+            "label": "Approve once"
+          },
+          {
+            "id": "approve_always",
+            "label": "Approve for this session"
+          },
+          {
+            "id": "reject",
+            "label": "Reject"
+          }
+        ],
+        "shell_classified": true,
+        "title": "Write",
+        "tool_call_id": "1:tool-2"
+      }
+    ],
+    "frame": "session/request_permission",
+    "recorded_options": {
+      "always": "approve_always",
+      "once": "approve_once",
+      "reject": "reject"
+    }
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "1:tool-2",
+        "tool_output": "{\"path\":\"f.txt\",\"content\":\"z\\n\"}",
+        "tool_output_bytes": 32,
+        "tool_output_digest": "e8805bf901a2f131e4b1f7b163be78cd75553a9300dd77cc67987cadc20eacde",
+        "tool_status": "in_progress"
+      },
+      {
+        "kind": "tool_call_update",
+        "raw_tool_params": {
+          "content": "z\n",
+          "path": "f.txt"
+        },
+        "title": "Writing f.txt",
+        "tool_call_id": "1:tool-2",
+        "tool_input": "{\n  \"path\": \"f.txt\",\n  \"content\": \"z\\n\"\n}",
+        "tool_kind": "edit",
+        "wire_title": "Writing f.txt"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "1:tool-2",
+        "tool_final": true,
+        "tool_output": "Wrote 2 bytes to f.txt",
+        "tool_output_bytes": 22,
+        "tool_output_digest": "c6ac8812408a20287348fcfe5ce92f037f0410ad41e1abddc614cadf6eb4450f",
+        "tool_status": "completed"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "frame": "response",
+    "id": 3,
+    "stop_reason": "end_turn"
+  },
+  {
+    "action": "update",
+    "events": [],
+    "frame": "session/update",
+    "session_update": "current_mode_update"
+  },
+  {
+    "action": "update",
+    "events": [],
+    "frame": "session/update",
+    "session_update": "config_option_update"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "is_shell": true,
+        "kind": "tool_call",
+        "title": "Bash",
+        "tool_call_id": "2:tool-3",
+        "tool_kind": "execute",
+        "wire_title": "Bash"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "2:tool-3",
+        "tool_output": "{\"command\":\"",
+        "tool_output_bytes": 12,
+        "tool_output_digest": "987afbaaefb04d33526ed3164d16878c3e8a0b060709b754e32dfd79f94bdb6c",
+        "tool_status": "in_progress"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "2:tool-3",
+        "tool_output": "{\"command\":\"echo",
+        "tool_output_bytes": 16,
+        "tool_output_digest": "c01934fa12c275f902a8e5dc346d711c80597029ef6d51e909bea63305eaeca7",
+        "tool_status": "in_progress"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "2:tool-3",
+        "tool_output": "{\"command\":\"echo again",
+        "tool_output_bytes": 22,
+        "tool_output_digest": "3e5ba053b4ae251fd7017cc106930bc714214617ce7867516a18f16f3f95c9f3",
+        "tool_status": "in_progress"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "2:tool-3",
+        "tool_output": "{\"command\":\"echo again >",
+        "tool_output_bytes": 24,
+        "tool_output_digest": "d3631be3bb16f2bd8f8e13575162a1c8bc466e016fd245fe1178c2fe80190621",
+        "tool_status": "in_progress"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "2:tool-3",
+        "tool_output": "{\"command\":\"echo again > h",
+        "tool_output_bytes": 26,
+        "tool_output_digest": "160e65dd6513829b296f372ef81e79e712d9ddf1c49b30d0d08e4ff7eae40795",
+        "tool_status": "in_progress"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "2:tool-3",
+        "tool_output": "{\"command\":\"echo again > h.txt",
+        "tool_output_bytes": 30,
+        "tool_output_digest": "7290c87f73bea772a5cc936facd21d3cd7657d62336eeba62e4267a8ea9a73e9",
+        "tool_status": "in_progress"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "2:tool-3",
+        "tool_output": "{\"command\":\"echo again > h.txt\"",
+        "tool_output_bytes": 31,
+        "tool_output_digest": "ea1f998f70d464aa17470275c3566d6e51d9cc5c2ec8d809888128cf8572906c",
+        "tool_status": "in_progress"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "2:tool-3",
+        "tool_output": "{\"command\":\"echo again > h.txt\"}",
+        "tool_output_bytes": 32,
+        "tool_output_digest": "d7ee8749660e98768eab2400c98e70b64bf216aa91d0a7c4cc21db0867e78a2d",
+        "tool_status": "in_progress"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "permission",
+    "events": [
+      {
+        "is_shell": true,
+        "kind": "permission_request",
+        "mcp_identity_trusted": true,
+        "options": [
+          {
+            "id": "approve_once",
+            "label": "Approve once"
+          },
+          {
+            "id": "approve_always",
+            "label": "Approve for this session"
+          },
+          {
+            "id": "reject",
+            "label": "Reject"
+          }
+        ],
+        "request_id": 1,
+        "shell_classified": true,
+        "title": "Bash",
+        "tool_call_id": "2:tool-3"
+      }
+    ],
+    "frame": "session/request_permission",
+    "recorded_options": {
+      "always": "approve_always",
+      "once": "approve_once",
+      "reject": "reject"
+    }
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "2:tool-3",
+        "tool_output": "{\"command\":\"echo again > h.txt\"}",
+        "tool_output_bytes": 32,
+        "tool_output_digest": "d7ee8749660e98768eab2400c98e70b64bf216aa91d0a7c4cc21db0867e78a2d",
+        "tool_status": "in_progress"
+      },
+      {
+        "is_shell": true,
+        "kind": "tool_call_update",
+        "raw_tool_params": {
+          "command": "echo again > h.txt"
+        },
+        "title": "echo again > h.txt",
+        "tool_call_id": "2:tool-3",
+        "tool_input": "{\n  \"command\": \"echo again > h.txt\"\n}",
+        "tool_kind": "execute",
+        "wire_title": "Running: echo again > h.txt"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "2:tool-3",
+        "tool_final": true,
+        "tool_output": "Command executed successfully.",
+        "tool_output_bytes": 30,
+        "tool_output_digest": "3988564dff1cdd1cd387a48c0a0932a6ede55f52a5bdad2c622b9b2ca99a3e2a",
+        "tool_status": "completed"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "frame": "response",
+    "id": 5,
+    "stop_reason": "end_turn"
+  }
+]

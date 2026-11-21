@@ -1,0 +1,231 @@
+[
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_call",
+        "title": "Write",
+        "tool_call_id": "0:tool-1",
+        "tool_kind": "edit",
+        "wire_title": "Write"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "0:tool-1",
+        "tool_output": "{\"path\":\"",
+        "tool_output_bytes": 9,
+        "tool_output_digest": "fbfbfcd4e45a93e0b338500eb9222da942c603c3a3ce1bfa696a632224b801d3",
+        "tool_status": "in_progress"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "0:tool-1",
+        "tool_output": "{\"path\":\"a",
+        "tool_output_bytes": 10,
+        "tool_output_digest": "27627f98084a2fe01b978624eb4c7cf63ab0756b636cae43d489a41845312997",
+        "tool_status": "in_progress"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "0:tool-1",
+        "tool_output": "{\"path\":\"a.txt",
+        "tool_output_bytes": 14,
+        "tool_output_digest": "da073307b648394fc891ee9be289bab31db6aaf2c1192f9cd071138203c639ea",
+        "tool_status": "in_progress"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "0:tool-1",
+        "tool_output": "{\"path\":\"a.txt\"",
+        "tool_output_bytes": 15,
+        "tool_output_digest": "dd4e83a05e61327951a392c7f075b7c677f2f0ab17da9e97ef626900b24e7bc4",
+        "tool_status": "in_progress"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "0:tool-1",
+        "tool_output": "{\"path\":\"a.txt\",\"content\":\"",
+        "tool_output_bytes": 27,
+        "tool_output_digest": "9277e58a173b69e944ebd9ba6e3f7379b969edb73b7e58a3c59e9d1b785ec9dc",
+        "tool_status": "in_progress"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "0:tool-1",
+        "tool_output": "{\"path\":\"a.txt\",\"content\":\"hi",
+        "tool_output_bytes": 29,
+        "tool_output_digest": "fefd4859b69269c36e5f836320a234a25bd408981af7ef9647db51217eda6f56",
+        "tool_status": "in_progress"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "0:tool-1",
+        "tool_output": "{\"path\":\"a.txt\",\"content\":\"hi\\n",
+        "tool_output_bytes": 31,
+        "tool_output_digest": "19676351257f5f630b0c34bf50772e8f453d79c749cfe24595d1b54507df67de",
+        "tool_status": "in_progress"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "0:tool-1",
+        "tool_output": "{\"path\":\"a.txt\",\"content\":\"hi\\n\"",
+        "tool_output_bytes": 32,
+        "tool_output_digest": "8ef413faaa852efa3ec73535a92475d97d320a9dd9c1a8500f45e57e7692df9d",
+        "tool_status": "in_progress"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "0:tool-1",
+        "tool_output": "{\"path\":\"a.txt\",\"content\":\"hi\\n\"}",
+        "tool_output_bytes": 33,
+        "tool_output_digest": "ac144d8c7d11c1016e69d5867257af9e0f0995959661d55cc66b4145d4393e74",
+        "tool_status": "in_progress"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "permission",
+    "events": [
+      {
+        "kind": "permission_request",
+        "mcp_identity_trusted": true,
+        "options": [
+          {
+            "id": "approve_once",
+            "label": "Approve once"
+          },
+          {
+            "id": "approve_always",
+            "label": "Approve for this session"
+          },
+          {
+            "id": "reject",
+            "label": "Reject"
+          }
+        ],
+        "shell_classified": true,
+        "title": "Write",
+        "tool_call_id": "0:tool-1"
+      }
+    ],
+    "frame": "session/request_permission",
+    "recorded_options": {
+      "always": "approve_always",
+      "once": "approve_once",
+      "reject": "reject"
+    }
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "0:tool-1",
+        "tool_output": "{\"path\":\"a.txt\",\"content\":\"hi\\n\"}",
+        "tool_output_bytes": 33,
+        "tool_output_digest": "ac144d8c7d11c1016e69d5867257af9e0f0995959661d55cc66b4145d4393e74",
+        "tool_status": "in_progress"
+      },
+      {
+        "kind": "tool_call_update",
+        "raw_tool_params": {
+          "content": "hi\n",
+          "path": "a.txt"
+        },
+        "title": "Writing a.txt",
+        "tool_call_id": "0:tool-1",
+        "tool_input": "{\n  \"path\": \"a.txt\",\n  \"content\": \"hi\\n\"\n}",
+        "tool_kind": "edit",
+        "wire_title": "Writing a.txt"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "0:tool-1",
+        "tool_final": true,
+        "tool_output": "Wrote 3 bytes to a.txt",
+        "tool_output_bytes": 22,
+        "tool_output_digest": "35a5af661d7127e95bb12db8a3dc62231ec4d09e5150943425818298100a73fd",
+        "tool_status": "completed"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "frame": "response",
+    "id": 3,
+    "stop_reason": "end_turn"
+  }
+]

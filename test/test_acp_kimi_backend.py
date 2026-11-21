@@ -23,6 +23,7 @@ from kiro_crew.acp import client_kimi_session
 from kiro_crew.acp import launch as launch_mod
 from kiro_crew.acp.client import PROTOCOL_VERSION_KIMI, AcpClient, KimiAcpClient
 from kiro_crew.acp.harness import kimi as kimi_mod
+from kiro_crew.acp.harness import kimi_fs as kimi_fs_mod
 from kiro_crew.acp.harness.kimi import KIMI_AGENT_NAME
 from kiro_crew.acp.harness import process_adapter_for
 from kiro_crew.acp.harness.base import SpawnContext
@@ -99,13 +100,15 @@ def test_kimi_is_known_and_dormant() -> None:
 
 
 def test_kimi_joined_no_capability_set_without_a_capture() -> None:
-    """Stage 2: membership beyond these three needs a live capture, so none is held."""
+    """Membership beyond these four needs a live capture, so none is held."""
     from kiro_crew.agent_sdk import backends
 
     decided = {
         "ACP_BACKENDS_KNOWN",
         "ACP_BACKENDS_SELF_SERVED_ACP",
         "ACP_BACKENDS_ACP_CLIENT_SPAWNABLE",
+        # Its read-only tools run with no permission request (``HARNESS_UNASKED_TOOL_IDS``).
+        "ACP_BACKENDS_UNASKED_NATIVE_TOOLS",
     }
     joined = {
         name
@@ -139,10 +142,22 @@ def test_the_client_class_and_adapter_are_registered() -> None:
     assert isinstance(process_adapter_for(KIMI), kimi_mod.KimiLaunch)
 
 
-def test_the_child_reports_no_telemetry() -> None:
-    env: dict[str, str] = {}
-    kimi_mod.KimiLaunch().apply_spawn_env(env)
-    assert env == {"KIMI_DISABLE_TELEMETRY": "1"}
+def test_the_child_env_is_crews_home_no_telemetry_and_no_self_update() -> None:
+    launch = kimi_mod.KimiLaunch()
+    launch._home = "/crew/kimi-home/abc"
+    # An operator's own KIMI_CODE_HOME names where the sign-in was copied FROM; it must not survive.
+    env: dict[str, str] = {"KIMI_CODE_HOME": "/home/operator/.kimi-code"}
+    launch.apply_spawn_env(env)
+    assert env == {
+        "KIMI_CODE_HOME": "/crew/kimi-home/abc",
+        "KIMI_DISABLE_TELEMETRY": "1",
+        "KIMI_CODE_NO_AUTO_UPDATE": "1",
+    }
+
+
+def test_a_child_without_crews_home_is_refused() -> None:
+    with pytest.raises(AcpToolGateUnroutable):
+        kimi_mod.KimiLaunch().apply_spawn_env({})
 
 
 @pytest.mark.asyncio
@@ -155,20 +170,32 @@ async def test_the_spawn_resolves_the_binary_and_arms_the_unasked_tripwire(
     monkeypatch.setattr(launch_mod, "resolve_self_served_launch", resolved)
     monkeypatch.setattr(launch_mod, "_run_preflight_bounded", AsyncMock(return_value=()))
     monkeypatch.setattr(kimi_mod, "kimi_node_found", lambda _bin: "")
+    monkeypatch.setattr(kimi_mod, "config_dir", lambda: tmp_path / "crew")
+    # A home that ``KIMI_CODE_HOME=<home> kimi login`` signed in.
+    (tmp_path / "crew" / "kimi-home" / "credentials").mkdir(parents=True)
+    (tmp_path / "crew" / "kimi-home" / "credentials" / "kimi-code.json").write_text("{}")
     client = AcpClient(work_dir=tmp_path, acp_backend=KIMI)
     ctx = SpawnContext.__new__(SpawnContext)
     object.__setattr__(ctx, "session", client)
     object.__setattr__(ctx, "work_dir", tmp_path)
     object.__setattr__(ctx, "sandbox_mode", "auto")
+    object.__setattr__(ctx, "environ", {})
+    object.__setattr__(ctx, "home", tmp_path / "userhome")
 
-    plan = await kimi_mod.KimiLaunch().resolve_spawn(ctx)
+    launch = kimi_mod.KimiLaunch()
+    plan = await launch.resolve_spawn(ctx)
 
     assert plan.argv == ["/opt/bin/kimi", "acp"]
     assert (plan.spawn_label, plan.stderr_label) == ("kimi acp", "kimi")
     resolved.assert_awaited_once_with(KIMI)
-    # Fail-closed: no ``HARNESS_UNASKED_TOOL_IDS`` row exists yet, so every call that
-    # completes with no permission request ends the session.
+    # Fail-closed outside ``HARNESS_UNASKED_TOOL_IDS[kimi]``: every other call that completes
+    # with no permission request ends the session.
     assert client._unasked_shell_tripwire is True
+    # The child runs out of the Crew-owned home the spawn just prepared.
+    env: dict[str, str] = {}
+    launch.apply_spawn_env(env)
+    assert Path(env["KIMI_CODE_HOME"]) == tmp_path / "crew" / "kimi-home"
+    assert (Path(env["KIMI_CODE_HOME"]) / "config.toml").is_file()
 
 
 # ── handshake: identity and release ──────────────────────────────────────────
@@ -256,7 +283,7 @@ async def test_crew_writes_mode_default_through_a_config_option_and_never_set_mo
 
 
 def test_no_kimi_module_calls_set_mode() -> None:
-    for module in (kimi_mod, client_kimi_session):
+    for module in (kimi_mod, kimi_fs_mod, client_kimi_session):
         names = {
             node.attr if isinstance(node, ast.Attribute) else node.id
             for node in ast.walk(ast.parse(inspect.getsource(module)))
@@ -413,12 +440,12 @@ def test_the_auth_declaration() -> None:
         ".kimi-code/user-history",
     )
     assert declaration.home_override_env_vars == ("KIMI_CODE_HOME",)
-    # The subset rule is enforced in the constructor; the leaves a host logout could
-    # not have invalidated stay declared as not retired.
-    assert set(declaration.adapter_own_leaves) <= set(declaration.credential_leaves)
+    # The child runs out of Crew's own home (``prepare_kimi_home``), so none of the person's
+    # own leaves is spared from its mask.
+    assert declaration.adapter_own_leaves == ()
     assert declaration.host_logout_retires_children is False
-    assert "kimi login" in declaration.sign_in_remedy
-    assert "kimi login" in declaration.signed_out_message
+    for text in (declaration.sign_in_remedy, declaration.signed_out_message):
+        assert "KIMI_CODE_HOME=~/.kiro/crew/kimi-home kimi login" in text
     # Signed out, Kimi 2.7.2 answers ``session/prompt`` with nothing at all (no error
     # text exists to copy), so the signature stays empty; ``kimi_signed_out`` reads the
     # handshake instead.
@@ -448,17 +475,26 @@ def test_the_agents_file_tools_cannot_read_a_kimi_leaf(leaf: str, tmp_path, monk
     assert is_sensitive_path(str(relocated / leaf))
 
 
-def test_the_child_may_read_its_own_leaves_and_the_rest_of_the_floor_stays_masked() -> None:
+def test_the_child_may_use_crews_home_and_never_the_persons_own_or_a_foreign_childs() -> None:
     import os
 
+    from kiro_crew.security import crew_home_prefixes
+
     home = os.path.expanduser("~")
-    own = {
-        os.path.join(home, *leaf.split("/")) for leaf in gate.ADAPTER_OWN_CREDENTIAL_LEAVES[KIMI]
-    }
     masked = set(gate.adapter_hidden_credential_dirs(KIMI))
-    assert own and own.isdisjoint(masked)
+    for leaf in host_auth.declaration_for(KIMI).credential_leaves:
+        assert os.path.join(home, *leaf.split("/")) in masked
     for floor_leaf in (".aws", ".ssh"):
         assert os.path.join(home, floor_leaf) in masked
+    crew_homes = {os.path.join(home, p, gate.KIMI_HOME_LEAF) for p in crew_home_prefixes()}
+    assert crew_homes.isdisjoint(masked)
+    # Another harness's child keeps Kimi's home masked, and the agent's file tools cannot open it.
+    other = set(gate.adapter_hidden_credential_dirs("codex"))
+    assert crew_homes <= other
+    for prefix in crew_home_prefixes():
+        assert is_sensitive_path(
+            os.path.join(home, prefix, gate.KIMI_HOME_LEAF, "abc", "credentials", "kimi-code.json")
+        )
 
 
 # ── a project's own configuration ────────────────────────────────────────────

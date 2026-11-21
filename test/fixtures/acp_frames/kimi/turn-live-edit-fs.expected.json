@@ -1,0 +1,420 @@
+[
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_call",
+        "title": "Edit",
+        "tool_call_id": "0:tool-1",
+        "tool_kind": "edit",
+        "wire_title": "Edit"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "0:tool-1",
+        "tool_output": "{\"path\":\"",
+        "tool_output_bytes": 9,
+        "tool_output_digest": "fbfbfcd4e45a93e0b338500eb9222da942c603c3a3ce1bfa696a632224b801d3",
+        "tool_status": "in_progress"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "0:tool-1",
+        "tool_output": "{\"path\":\"/home",
+        "tool_output_bytes": 14,
+        "tool_output_digest": "cc34a8f2623e83ef5f4e8de0f2aaaa3d6d2aa968e55a14a560736e359caf8431",
+        "tool_status": "in_progress"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "0:tool-1",
+        "tool_output": "{\"path\":\"~",
+        "tool_output_bytes": 10,
+        "tool_output_digest": "896159c2e54fd3afea7c8cdeac0b1aa3b41843b304b3a5bb47a5bf66214c2971",
+        "tool_status": "in_progress"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "0:tool-1",
+        "tool_output": "{\"path\":\"~/k",
+        "tool_output_bytes": 12,
+        "tool_output_digest": "4af7a3b4183d8448014b1b254788269ba5b707392523838f3f308e19468af40d",
+        "tool_status": "in_progress"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "0:tool-1",
+        "tool_output": "{\"path\":\"~/kimi",
+        "tool_output_bytes": 15,
+        "tool_output_digest": "ddfbe9f9254f3d04225a62d110d45a7e5823d2d977aece0c2ad6b6eedaa2e34a",
+        "tool_status": "in_progress"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "0:tool-1",
+        "tool_output": "{\"path\":\"~/kimi-c",
+        "tool_output_bytes": 17,
+        "tool_output_digest": "98e0ccdafa67e932ae457157afac089e9723ef99bca92f5350b0d69b1a6438a9",
+        "tool_status": "in_progress"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "0:tool-1",
+        "tool_output": "{\"path\":\"~/kimi-capt",
+        "tool_output_bytes": 20,
+        "tool_output_digest": "00946ecfc8899e351c6ddbb084190ab3e9d877000b7375a7e53488a78054152b",
+        "tool_status": "in_progress"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "0:tool-1",
+        "tool_output": "{\"path\":\"~/kimi-captures",
+        "tool_output_bytes": 24,
+        "tool_output_digest": "9faf549559600b9ef8bb200825730e5e840913fa5a0919ce30fc9dc4082d4a01",
+        "tool_status": "in_progress"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "0:tool-1",
+        "tool_output": "{\"path\":\"~/kimi-captures/work",
+        "tool_output_bytes": 29,
+        "tool_output_digest": "1dcaebb9e5d6e84477b85a285ff2ad2de0bc86690e4ce00c1413b955a269dcb2",
+        "tool_status": "in_progress"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "0:tool-1",
+        "tool_output": "{\"path\":\"~/kimi-captures/work/d",
+        "tool_output_bytes": 31,
+        "tool_output_digest": "e500dd65a3a7346463d898936dc8b460894be119daa693554a11c7c6bb1692b7",
+        "tool_status": "in_progress"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "0:tool-1",
+        "tool_output": "{\"path\":\"~/kimi-captures/work/d.txt",
+        "tool_output_bytes": 35,
+        "tool_output_digest": "075793d60bc48e72d959126e26f53caa81bd05b9d62eb671e3629f2e49f9c6fe",
+        "tool_status": "in_progress"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "0:tool-1",
+        "tool_output": "{\"path\":\"~/kimi-captures/work/d.txt\"",
+        "tool_output_bytes": 36,
+        "tool_output_digest": "43a2b14ef350d26028676a660ce57780096c8ef8ea894d8a037c13b18e1a9efe",
+        "tool_status": "in_progress"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "0:tool-1",
+        "tool_output": "{\"path\":\"~/kimi-captures/work/d.txt\",\"old_string\":\"",
+        "tool_output_bytes": 51,
+        "tool_output_digest": "6d2df5959db7ee63d2a6bfa9b9fd1a64b0e4b209d106e4d2d465716596ced767",
+        "tool_status": "in_progress"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "0:tool-1",
+        "tool_output": "{\"path\":\"~/kimi-captures/work/d.txt\",\"old_string\":\"hi",
+        "tool_output_bytes": 53,
+        "tool_output_digest": "f9b1fc92237334a6e4f1272852f6fb51a97c28ce36d3e807739a2fe8e2d573a8",
+        "tool_status": "in_progress"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "0:tool-1",
+        "tool_output": "{\"path\":\"~/kimi-captures/work/d.txt\",\"old_string\":\"hi\"",
+        "tool_output_bytes": 54,
+        "tool_output_digest": "f7b0c29fa1f855330298ee8041960c18473c0f252b1d02e9f511ff530022327c",
+        "tool_status": "in_progress"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "0:tool-1",
+        "tool_output": "{\"path\":\"~/kimi-captures/work/d.txt\",\"old_string\":\"hi\",\"new_string\":\"",
+        "tool_output_bytes": 69,
+        "tool_output_digest": "eb673239f9f80d851c87f9d23095fe5f581561a6c7c084af09c383d838234f6c",
+        "tool_status": "in_progress"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "0:tool-1",
+        "tool_output": "{\"path\":\"~/kimi-captures/work/d.txt\",\"old_string\":\"hi\",\"new_string\":\"yo",
+        "tool_output_bytes": 71,
+        "tool_output_digest": "3ff344e55abf3153970dd528479d7a8ad2c5d3c3bfa2759c4ec965416bb40907",
+        "tool_status": "in_progress"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "0:tool-1",
+        "tool_output": "{\"path\":\"~/kimi-captures/work/d.txt\",\"old_string\":\"hi\",\"new_string\":\"yo\"",
+        "tool_output_bytes": 72,
+        "tool_output_digest": "58f734f05902c552e6a3cac123b249c37e25945f90ecf098d28f78ca5379a16e",
+        "tool_status": "in_progress"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "0:tool-1",
+        "tool_output": "{\"path\":\"~/kimi-captures/work/d.txt\",\"old_string\":\"hi\",\"new_string\":\"yo\"}",
+        "tool_output_bytes": 73,
+        "tool_output_digest": "adb8a38c5125cd10d5959656e5393ae06cd9cb0423e8bfda50f20b8dd57c8932",
+        "tool_status": "in_progress"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "permission",
+    "events": [
+      {
+        "kind": "permission_request",
+        "mcp_identity_trusted": true,
+        "options": [
+          {
+            "id": "approve_once",
+            "label": "Approve once"
+          },
+          {
+            "id": "approve_always",
+            "label": "Approve for this session"
+          },
+          {
+            "id": "reject",
+            "label": "Reject"
+          }
+        ],
+        "request_id": 5,
+        "shell_classified": true,
+        "title": "Edit",
+        "tool_call_id": "0:tool-1"
+      }
+    ],
+    "frame": "session/request_permission",
+    "recorded_options": {
+      "always": "approve_always",
+      "once": "approve_once",
+      "reject": "reject"
+    }
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "0:tool-1",
+        "tool_output": "{\"path\":\"~/kimi-captures/work/d.txt\",\"old_string\":\"hi\",\"new_string\":\"yo\"}",
+        "tool_output_bytes": 73,
+        "tool_output_digest": "adb8a38c5125cd10d5959656e5393ae06cd9cb0423e8bfda50f20b8dd57c8932",
+        "tool_status": "in_progress"
+      },
+      {
+        "diff_old_text": "hi",
+        "diff_path": "~/kimi-captures/work/d.txt",
+        "kind": "tool_call_update",
+        "raw_tool_params": {
+          "new_string": "yo",
+          "old_string": "hi",
+          "path": "~/kimi-captures/work/d.txt"
+        },
+        "title": "Editing ~/kimi-captures/work/d.txt",
+        "tool_call_id": "0:tool-1",
+        "tool_input": "--- ~/kimi-captures/work/d.txt\n+++ ~/kimi-captures/work/d.txt\n@@ -1 +1 @@\n-hi\n+yo",
+        "tool_kind": "edit",
+        "wire_title": "Editing ~/kimi-captures/work/d.txt"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "server_request_unknown",
+    "frame": "fs/read_text_file",
+    "params": {
+      "path": "~/kimi-captures/work/d.txt",
+      "sessionId": "kimi-session-1"
+    }
+  },
+  {
+    "action": "server_request_unknown",
+    "frame": "fs/write_text_file",
+    "params": {
+      "content": "yo\n",
+      "path": "~/kimi-captures/work/d.txt",
+      "sessionId": "kimi-session-1"
+    }
+  },
+  {
+    "action": "server_request_unknown",
+    "frame": "fs/read_text_file",
+    "params": {
+      "path": "~/kimi-captures/work/.kimi-code/AGENTS.md",
+      "sessionId": "kimi-session-1"
+    }
+  },
+  {
+    "action": "server_request_unknown",
+    "frame": "fs/read_text_file",
+    "params": {
+      "path": "~/kimi-captures/work/AGENTS.md",
+      "sessionId": "kimi-session-1"
+    }
+  },
+  {
+    "action": "server_request_unknown",
+    "frame": "fs/read_text_file",
+    "params": {
+      "path": "~/kimi-captures/work/agents.md",
+      "sessionId": "kimi-session-1"
+    }
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "0:tool-1",
+        "tool_output": "write blocked by host policy",
+        "tool_output_bytes": 28,
+        "tool_output_digest": "19f4c63492f3774ac99027faa06b500a8eb0d5138899709926fb2b50d25b4f01",
+        "tool_status": "failed"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  }
+]
