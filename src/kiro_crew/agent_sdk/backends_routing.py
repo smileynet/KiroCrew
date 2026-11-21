@@ -32,6 +32,7 @@ from kiro_crew.agent_sdk.backends import (
     ACP_BACKEND_DEEPSEEK,
     ACP_BACKEND_GOOSE,
     ACP_BACKEND_KAS,
+    ACP_BACKEND_KIMI,
     ACP_BACKEND_KIRO,
     ACP_BACKEND_MIMOCODE,
     ACP_BACKEND_OPENCODE,
@@ -517,6 +518,11 @@ ACP_BACKEND_ROUTING: dict = {
     # ``session/request_permission`` (``test/fixtures/acp_frames/mimocode``).
     ACP_BACKEND_MIMOCODE: Routing.VERIFIED_SEEDED_SETTINGS,
     ACP_BACKEND_ANTIGRAVITY: Routing.SESSION_CONFIG,
+    # Kimi Code CLI states its permission mode as a ``mode`` config option on every
+    # ``session/new`` (``default`` / ``plan`` / ``auto`` / ``yolo``), the same
+    # mechanism as Antigravity's. Observed on 2.7.2 in ``~/kimi-captures`` on
+    # randomserver (initialize + session/new).
+    ACP_BACKEND_KIMI: Routing.SESSION_CONFIG,
 }
 
 
@@ -543,6 +549,15 @@ ACP_BACKEND_PERMISSION_CONFIG: dict = {
     # has and the same OS credential mask compensates for.
     ACP_BACKEND_COPILOT: ("allow_all", "off"),
     ACP_BACKEND_ANTIGRAVITY: ("mode", "default"),
+    # Kimi's ``default`` is "Manual approvals; tools execute normally" (its own
+    # description string on the wire; the docs call it Always Ask). ``auto`` and
+    # ``yolo`` are the two that approve tools without asking. Crew writes the pin
+    # through ``session/set_config_option`` and never calls ``session/set_mode``.
+    # TODO(capture): the final captures report must confirm (1) a permission request
+    # arrives for a shell call in ``default``, (2) the ``config_option_update`` and
+    # ``current_mode_update`` spellings after a mode change, and (3) that reads run
+    # unasked or ask; until then the harness stays dormant.
+    ACP_BACKEND_KIMI: ("mode", "default"),
 }
 
 
@@ -682,6 +697,15 @@ ACP_BACKEND_PROMPT_COMMAND_ALLOWLIST: dict = {
     # clears the operator's credential, so a command-shaped prompt from a channel
     # or subagent must not reach it.
     ACP_BACKEND_ANTIGRAVITY: frozenset({"plan", "usage"}),
+    # Kimi's ``available_commands_update`` (2.7.2) lists compact, status, usage, mcp,
+    # tasks and help beside its skills. Only these read-only or context-only ones may
+    # start a prompt. ``/yolo`` and ``/auto`` (mode switches), ``/login``, ``/logout``,
+    # ``/goal`` and every skill command (``mcp-config`` drives MCP OAuth login) are
+    # refused before the wire, as is any command this build has never seen.
+    # TODO(capture): confirm over ACP that each listed command only reads, and which
+    # commands a ``session/prompt`` actually runs; the TUI's ``/yolo`` and ``/auto``
+    # are not in the ACP list, and nothing observed says a prompt cannot reach them.
+    ACP_BACKEND_KIMI: frozenset({"compact", "help", "mcp", "status", "tasks", "usage"}),
     ACP_BACKEND_COPILOT: frozenset(
         {
             "compact",
@@ -714,6 +738,11 @@ ACP_BACKEND_FORBIDDEN_MODES: dict = {
         {"https://agentclientprotocol.com/protocol/session-modes#autopilot"}
     ),
     ACP_BACKEND_ANTIGRAVITY: frozenset({"auto_edit", "yolo"}),
+    # ``auto`` is Kimi's "Never Ask" (no approvals; dangerous-command guard off) and
+    # ``yolo`` its "Ask When Needed" (auto-approves routine calls). Plan mode is not
+    # listed: it is read-only, and the option drifting off ``default`` is already
+    # refused by the permission-option read-back.
+    ACP_BACKEND_KIMI: frozenset({"yolo", "auto"}),
 }
 
 
