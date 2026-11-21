@@ -202,7 +202,7 @@ ADAPTER_OWN_CREDENTIAL_LEAVES: dict = {
 PI_GATE_ARTIFACT_LEAF = "pi-gate"
 
 #: Crew-home leaf holding the Crew-owned Kimi Code homes (``acp.harness.kimi.prepare_kimi_home``):
-#: a copy of the person's Kimi sign-in, Kimi's own state and a ``config.toml`` Crew wrote. Kimi's
+#: the home's own Kimi sign-in (never a copy of the person's), Kimi's own state and a ``config.toml`` Crew wrote. Kimi's
 #: child must READ AND WRITE it (it refreshes its token and keeps its sessions there), so it is
 #: excluded from the Kimi child's credential mask below; the read gate floor still fences the
 #: AGENT's file tools from it (``security.paths_lists``), so the two controls cover different

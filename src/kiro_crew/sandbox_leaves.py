@@ -1089,7 +1089,7 @@ _CREW_CHILD_WITHHELD_LEAVES: tuple[str, ...] = (
     # KAS MCP launch snapshots hold MCP servers' env values, and only a KAS child
     # (not an enforced harness's) starts the launcher that reads them.
     "kas-mcp-launch",
-    # Crew-owned Kimi Code homes. They hold a COPY of the person's Kimi sign-in, so they are
+    # Crew-owned Kimi Code homes. They hold a sign-in of their own (nothing copied from the person's), so they are
     # withheld from every other harness's child; Kimi's own child gets its home back per
     # backend in ``tool_gate.adapter_hidden_credential_dirs`` (``ADAPTER_CREW_HOME_LEAVES``).
     "kimi-home",
