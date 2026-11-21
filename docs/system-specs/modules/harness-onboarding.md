@@ -1183,3 +1183,59 @@ asking (that session refused it). Crew refuses both as shell calls whose command
 cannot be verified (`antigravity_call_is_unverifiable`). Enterprise policies that may auto-proceed some terminal tools were visible in the
 runtime's source strings but were not driven against an enterprise account, so the
 contribution must not describe them as accepted.
+
+## Worked example: Kimi
+
+The run to read for a **dormant** landing: Stages 1 to 6 complete, one harness that
+cannot yet be chosen, and every decision that needs a live capture written down as
+pending rather than guessed. Moonshot's **Kimi Code CLI** (npm `@moonshot-ai/kimi-code`
+`2.7.2`, command `kimi`, ACP through `kimi acp`) is in `ACP_BACKENDS_KNOWN` and is named
+in `NOT_SHIPPED_SELECTABLE`. It is *not* the archived Python `kimi-cli`, which also
+installs `kimi` and also answers `kimi acp`; on a host that ran its installer the two sit
+side by side (`~/.kimi-code/bin/kimi` there is the legacy build), so the handshake, not
+the command name, tells them apart.
+
+What was observed rather than read: an `initialize` and `session/new` against 2.7.2
+(`agentInfo` is `{name: "Kimi Code CLI", version: "2.7.2"}`; `session/new` advertises a
+`mode` select of `default`, `plan`, `auto` and `yolo`, and an `available_commands_update`
+listing compact, status, usage, mcp, tasks and help beside its skills). Everything not
+named there is `pending capture`.
+
+| Stage | State |
+|---|---|
+| 1 vocabulary | Done: `ACP_BACKEND_KIMI`, `PROVIDER_LABEL_KIMI`, policy name mapped, its own `kimi` model namespace. In `NOT_SHIPPED_SELECTABLE`, not in `BASELINE_SELECTABLE_BACKENDS`. |
+| 2 capability sets | Member of `ACP_BACKENDS_KNOWN`, `ACP_BACKENDS_SELF_SERVED_ACP` (derived from the launch row) and `ACP_BACKENDS_ACP_CLIENT_SPAWNABLE` (a code fact: `KimiLaunch` is registered). Out of every other set, and each of those is `pending capture` or follows from one that is, below. No set was joined on the strength of the docs alone. |
+| 3 spawn path | Done: a self-served `ACP_BACKEND_LAUNCH` row (`kimi acp`, `KIMI_BIN`, install `npm i -g @moonshot-ai/kimi-code@2.7.2`), `acp/harness/kimi.py` (`KimiLaunch`), `acp/client_kimi.py` and `acp/client_kimi_session.py`. The child gets `KIMI_DISABLE_TELEMETRY=1`. The handshake refuses an `agentInfo.name` other than `Kimi Code CLI` and any version other than `2.7.2`, which also refuses the legacy kimi-cli. A project `.kimi-code/` directory refuses the session (`kimi_repo_config_issue`). |
+| 4 handshake | Done: `PROTOCOL_VERSION_KIMI`, its own constant, `1`. |
+| 5 auth declaration | Done: `own_credential_file`; `.kimi-code/credentials`, `config.toml`, `logs` and `sessions` on the floor, re-anchored under `KIMI_CODE_HOME`, all four spared for the child. The floor names directories, so `sessions/*/wire.jsonl` is fenced as the whole `sessions` directory. `signed_out_signature` is empty (pending capture). Host-contract column added. |
+| 6 install probe | Done from the launch row. The release is read from the npm manifest and a `kimi` that is not `2.7.2` is reported missing with the pinned command. A build with no manifest (the legacy Python install) reads as unknown and is refused at the handshake. |
+| Routing | `Routing.SESSION_CONFIG`, `("mode", "default")`. Forbidden modes `yolo` and `auto`. The prompt-command allowlist admits compact, help, mcp, status, tasks and usage, so `/yolo`, `/auto`, `/login`, `/goal` and every skill command are refused before the wire. Crew writes the pin with `session/set_config_option` and never calls `session/set_mode`. |
+| 7 selectability | **Not taken.** The MCP projection is declared `no-channel` (the launch adds nothing to the session array), so Crew's own tools are absent from a Kimi session. |
+
+### Pending capture
+
+Each line is a decision this landing did not take, because the set or field it belongs to
+is decided by a measurement that does not exist yet. Until it does, Kimi stays out.
+
+| Decision | Why it waits | Where the TODO sits |
+|---|---|---|
+| `ACP_BACKENDS_SESSION_MCP_ARRAY`, `ACP_BACKENDS_PRUNE_UNSTARTABLE_MCP`, the MCP projection kind | no stdio server was observed mounted and called | `providers/mirrors/registry.py` |
+| `ACP_BACKENDS_UNASKED_NATIVE_TOOLS` and the `HARNESS_UNASKED_TOOL_IDS` row | the docs say reads run unasked in `default`; no turn was observed. The tripwire is armed with no row, so it is fail-closed | `acp/harness/kimi.py` |
+| `ACP_BACKENDS_HONOR_ZERO_TOOL_BAN`, `ACP_BACKENDS_SIDE_READONLY` | follow from the unasked-tools answer | n/a |
+| `ACP_BACKENDS_COMPACT`, `INLINE_COMPACTION`, `HARNESS_MANAGED_COMPACTION`, `ACP_BACKEND_PROMPT_HANDLER_COMMANDS` | `/compact` is advertised; no compaction was driven | `agent_sdk/backends_routing.py` |
+| `ACP_BACKENDS_HARNESS_OWNED_SESSIONS`, `CWD_BOUND_SESSIONS`, `LOAD_WITHOUT_MODES`, `RESUME_WITHOUT_LOAD`, `SESSION_EVICTION`, `FORK_AT_MESSAGE` | `loadSession`, `resume`, `close` and `fork` are advertised; none was driven | n/a |
+| `ACP_BACKENDS_ADVERTISED_MODEL_SELECTION`, `MODEL_VIA_CONFIG_OPTION`, `EFFORT_VIA_CONFIG_OPTION` and the effort option id | `model` and `thinking` selects were seen on `session/new`; a write and a read-back were not | n/a |
+| `ACP_BACKENDS_STEER*`, `REPORT_USAGE`, `META_IDENTITY`, `INDEPENDENT_SETUP` | unmeasured | n/a |
+| The permission request shape for a shell call, the `config_option_update` and `current_mode_update` spellings, and whether a prompt can reach `/yolo` | no turn and no mode change was driven | `agent_sdk/backends_routing.py` |
+| `signed_out_signature` | no signed-out error text was captured | `agent_sdk/host_auth.py` |
+| Which of `logs` and `sessions` the sandboxed child must write | the sandbox was not run | `agent_sdk/host_auth.py` |
+| Whether a project `.kimi-code/` is already stopped by Kimi's workspace trust | headless behaviour unmeasured; refused on presence meanwhile | `acp/harness/kimi.py` |
+| Whether Crew's advertised `elicitation` capability sends Kimi's questions as `elicitation/create` | not driven | n/a |
+| Windows and macOS launch and install paths | the work was done on Linux only | n/a |
+
+Two things this run produced that the checklist did not ask for. **The name is not the
+identity**: a second product answers to the same command and the same ACP verb, so the
+handshake checks `agentInfo`, and the install probe reads the npm manifest instead of
+running the binary. **A dormant harness still needs a projection**: `PROJECTIONS` has no
+"not decided" kind, so Kimi is `no-channel`, which names the channel that would carry
+Crew's servers and points back to this section.
