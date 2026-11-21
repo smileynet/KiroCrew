@@ -1000,7 +1000,7 @@ AGENT_AUTH_DECLARATIONS: Tuple[AgentAuthDeclaration, ...] = (
         ),
         # NONE spared from the child's mask. Kiro Crew starts Kimi with its own
         # ``KIMI_CODE_HOME`` (``<crew data>/kimi-home``, ``acp.harness.kimi``), which holds a
-        # sign-in OF ITS OWN made with ``KIMI_CODE_HOME=<that home> kimi login``. Nothing is
+        # sign-in OF ITS OWN made with ``KIMI_CODE_HOME=<that home> kimi login --region global``. Nothing is
         # copied or linked from the person's home: Kimi rotates its refresh credential on each
         # refresh, so two homes holding one sign each other out (observed). The child never
         # opens the person's home, so the seven leaves above stay hidden from it. Crew's home
@@ -1011,16 +1011,20 @@ AGENT_AUTH_DECLARATIONS: Tuple[AgentAuthDeclaration, ...] = (
             "Kimi Code CLI signs in on its own, and Kiro Crew runs it out of its own home "
             "with a sign-in of its own (your own kimi login is not used). In a terminal on "
             "the gateway host, run KIMI_CODE_HOME=<Kiro Crew data folder>/kimi-home kimi "
-            "login (by default KIMI_CODE_HOME=~/.kiro/crew/kimi-home kimi login), complete "
-            f"the device-code sign-in, then start a new chat. {HOST_TERMINAL_NOTE} Kiro Crew "
+            "login with its region option set to global (by default the home is "
+            "~/.kiro/crew/kimi-home; the signed-out message in chat prints the exact command "
+            "for your shell), complete the device-code sign-in, then start a new chat. "
+            f"{HOST_TERMINAL_NOTE} Kiro Crew "
             "verifies Kimi Code CLI 2.7.2 only and refuses other versions, and refuses the "
             "archived Python kimi-cli."
         ),
         signed_out_message=(
             "Kimi Code CLI is not signed in for Kiro Crew. In a terminal on the gateway host, "
-            "run `KIMI_CODE_HOME=<Kiro Crew data folder>/kimi-home kimi login` (by default "
-            "`KIMI_CODE_HOME=~/.kiro/crew/kimi-home kimi login`), complete the device-code "
-            f"sign-in, then start a new chat. {HOST_TERMINAL_NOTE}"
+            "run `KIMI_CODE_HOME=<Kiro Crew data folder>/kimi-home kimi login --region global` "
+            "(by default `KIMI_CODE_HOME=~/.kiro/crew/kimi-home kimi login --region global`; in "
+            "PowerShell `$env:KIMI_CODE_HOME='<home>'; kimi login --region global`; in cmd "
+            '`set "KIMI_CODE_HOME=<home>" && kimi login --region global`), complete the '
+            f"device-code sign-in, then start a new chat. {HOST_TERMINAL_NOTE}"
         ),
         # Kimi 2.7.2 says "signed out" three ways, and each is read: on Windows
         # (flamingdragon, Node 24.17) ``session/new`` fails with -32000 "Authentication

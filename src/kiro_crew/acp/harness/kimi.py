@@ -41,9 +41,11 @@ import re
 import shlex
 import shutil
 import subprocess
+import tempfile
 import tomllib
 from collections.abc import Mapping
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from kiro_crew import acp_tool_gate
 from kiro_crew.acp import launch as launch_mod
@@ -114,6 +116,31 @@ _CHILD_ENV = {"KIMI_DISABLE_TELEMETRY": "1", "KIMI_CODE_NO_AUTO_UPDATE": "1"}
 
 #: Characters that would change what a permission pattern built from a path matches.
 _GLOB_CHARS = frozenset("*?[]{}()!\\")
+
+#: A Windows drive or UNC path. Kimi's globs want ``/``, so only these have ``\\`` spelled as ``/``;
+#: on POSIX a backslash is a glob escape and stays refused.
+_WINDOWS_PATH = re.compile(r"^(?:[A-Za-z]:[\\/]|\\\\)")
+
+#: The hosts ``kimi login`` talks to. A kept provider whose ``base_url`` or ``oauth_host`` points
+#: anywhere else would send the sign-in there, so it is refused (a tampered home config).
+_KIMI_HOST_SUFFIXES = ("kimi.com", "kimi.ai", "moonshot.cn", "moonshot.ai")
+
+#: Sub-keys of the kept tables that survive a rewrite, named from a signed-in 2.7.2 home. A key
+#: not listed (a command-style or unknown one) is dropped.
+_KEPT_PROVIDER_KEYS = frozenset({"type", "base_url", "api_key", "oauth"})
+_KEPT_OAUTH_KEYS = frozenset({"storage", "key", "oauth_host"})
+_KEPT_MODEL_KEYS = frozenset(
+    {
+        "provider",
+        "model",
+        "max_context_size",
+        "capabilities",
+        "display_name",
+        "support_efforts",
+        "default_effort",
+    }
+)
+_KEPT_THINKING_KEYS = frozenset({"enabled"})
 
 
 def kimi_installed_version(kimi_bin: str) -> str:
@@ -232,6 +259,8 @@ def _toml_tables(table: dict, path: tuple[str, ...]) -> list[str]:
 
 def _pattern_path(path: str, what: str) -> str:
     """*path* for use inside a permission pattern, or a refusal when it could widen the pattern."""
+    if _WINDOWS_PATH.match(path):
+        path = path.replace("\\", "/")
     if _GLOB_CHARS.intersection(path):
         raise AcpToolGateUnroutable(
             f"Kimi Code's permission rules match paths as globs, and {what} ({path}) holds a "
@@ -242,6 +271,59 @@ def _pattern_path(path: str, what: str) -> str:
             user_worded=True,
         )
     return path
+
+
+def _kimi_host(value: object) -> bool:
+    """Whether *value* (a URL or a bare host) names a Moonshot/Kimi host over https."""
+    if not isinstance(value, str):
+        return False
+    parsed = urlsplit(value if "://" in value else f"https://{value}")
+    host = (parsed.hostname or "").lower()
+    return parsed.scheme == "https" and any(
+        host == suffix or host.endswith("." + suffix) for suffix in _KIMI_HOST_SUFFIXES
+    )
+
+
+def _keep(table: object, allowed: frozenset[str]) -> dict:
+    return {k: v for k, v in table.items() if k in allowed} if isinstance(table, dict) else {}
+
+
+def _kept_tables(kept: Mapping[str, object]) -> dict[str, dict]:
+    """The ``providers``, ``models`` and ``thinking`` of *kept*, cut to the allowed sub-keys.
+
+    Refused (never silently repaired) when a provider's ``base_url`` or ``oauth_host`` is not a
+    Kimi host: the sign-in's token goes to that host.
+    """
+    providers: dict[str, dict] = {}
+    raw = kept.get("providers")
+    for name, provider in (raw.items() if isinstance(raw, dict) else ()):
+        entry = _keep(provider, _KEPT_PROVIDER_KEYS)
+        if "oauth" in entry:
+            entry["oauth"] = _keep(entry["oauth"], _KEPT_OAUTH_KEYS)
+        for where, value in (
+            ("base_url", entry.get("base_url")),
+            ("oauth.oauth_host", entry.get("oauth", {}).get("oauth_host")),
+        ):
+            if value is not None and not _kimi_host(value):
+                raise AcpToolGateUnroutable(
+                    f"Kiro Crew's Kimi home config.toml names a provider ({name}) whose {where} "
+                    "is not a Kimi or Moonshot host (kimi.com, kimi.ai, moonshot.cn, "
+                    "moonshot.ai), so the sign-in would be sent elsewhere and Kiro Crew does not "
+                    "start a Kimi Code session. Delete Kiro Crew's kimi-home/config.toml and "
+                    f"sign in again: {kimi_login_command()}",
+                    transient=False,
+                    user_worded=True,
+                )
+        providers[name] = entry
+    models = kept.get("models")
+    return {
+        "providers": providers,
+        "models": {
+            name: _keep(model, _KEPT_MODEL_KEYS)
+            for name, model in (models.items() if isinstance(models, dict) else ())
+        },
+        "thinking": _keep(kept.get("thinking"), _KEPT_THINKING_KEYS),
+    }
 
 
 def render_kimi_config(home: str, kept: Mapping[str, object] | None = None) -> str:
@@ -256,7 +338,7 @@ def render_kimi_config(home: str, kept: Mapping[str, object] | None = None) -> s
     the negated rule never asks; checked against Kimi 2.7.2's ``pathGlobMatch``).
 
     *kept* is the part ``kimi login`` wrote and Kimi needs to reach its model, filtered to
-    :data:`_KEPT_CONFIG_KEYS`; everything else a previous file held (hooks, rules, MCP, tools,
+    :data:`_KEPT_CONFIG_KEYS` and then to the sub-keys listed above; everything else a previous file held (hooks, rules, MCP, tools,
     services) is dropped, so a rewrite always restores Crew's posture.
     """
     home = _pattern_path(home, "Kiro Crew's Kimi home")
@@ -281,9 +363,8 @@ def render_kimi_config(home: str, kept: Mapping[str, object] | None = None) -> s
         ]
     disabled = ", ".join(_toml_str(tool) for tool in KIMI_DISABLED_TOOLS)
     lines += ["", "[tools]", f"disabled = [{disabled}]"]
-    for key in ("providers", "models", "thinking"):
-        if isinstance(kept.get(key), dict):
-            lines += _toml_tables(kept[key], (key,))
+    for key, table in _kept_tables(kept).items():
+        lines += _toml_tables(table, (key,))
     return "\n".join(lines) + "\n"
 
 
@@ -292,9 +373,25 @@ def kimi_home_dir() -> Path:
     return Path(os.path.realpath(str(config_dir()))) / KIMI_HOME_LEAF
 
 
-def kimi_login_command(home: Path | str | None = None) -> str:
-    """The one command that signs Crew's Kimi home in: a device login of its own."""
-    return f"KIMI_CODE_HOME={shlex.quote(str(home or kimi_home_dir()))} kimi login"
+def kimi_login_command(home: Path | str | None = None, shell: str | None = None) -> str:
+    """The one command that signs Crew's Kimi home in: a device login of its own, for *shell*.
+
+    *shell* is ``posix``, ``powershell`` or ``cmd``; by default the one this host's terminal
+    most likely is. ``--region global`` is always passed: ``kimi login`` defaults to the
+    mainland-China site and a global account cannot sign in there. One fixed region is the
+    simplest; a mainland account can run the command with ``--region cn`` instead.
+    """
+    path = str(home or kimi_home_dir())
+    shell = shell or ("powershell" if os.name == "nt" else "posix")
+    if shell == "powershell":
+        return f"$env:KIMI_CODE_HOME='{path.replace(chr(39), chr(39) * 2)}'; {_LOGIN}"
+    if shell == "cmd":
+        # Quoted whole, so a space in the path is not part of the command and none trails it.
+        return f'set "KIMI_CODE_HOME={path}" && {_LOGIN}'
+    return f"KIMI_CODE_HOME={shlex.quote(path)} {_LOGIN}"
+
+
+_LOGIN = "kimi login --region global"
 
 
 def kimi_signed_in(home: Path) -> bool:
@@ -310,11 +407,13 @@ def kimi_signed_in(home: Path) -> bool:
 
 def kimi_signed_out_message(home: Path | str | None = None) -> str:
     """The remedy for a Crew Kimi home with no (or an expired) sign-in."""
+    shells = ("powershell", "cmd") if os.name == "nt" else ("posix",)
+    commands = " or ".join(f"`{kimi_login_command(home, shell)}`" for shell in shells)
     return (
         "Kimi Code CLI is not signed in for Kiro Crew. Kiro Crew runs Kimi out of its own "
         "home with its own sign-in, so your own kimi login is not used (sharing one would "
         "make the two copies sign each other out). In a terminal on the gateway host run "
-        f"`{kimi_login_command(home)}`, complete the device-code sign-in, then start a new chat."
+        f"{commands}, complete the device-code sign-in, then start a new chat."
     )
 
 
@@ -345,11 +444,14 @@ def prepare_kimi_home() -> str:
     except (OSError, tomllib.TOMLDecodeError):
         previous = {}
     config = render_kimi_config(str(home), previous)
-    temp = home / ".config.toml.tmp"
-    fd = os.open(temp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
-    with os.fdopen(fd, "w", encoding="utf-8") as handle:
-        handle.write(config)
-    os.replace(temp, home / "config.toml")
+    fd, temp = tempfile.mkstemp(prefix=".config.toml.", suffix=".tmp", dir=home)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            handle.write(config)
+        os.replace(temp, home / "config.toml")
+    except BaseException:
+        Path(temp).unlink(missing_ok=True)
+        raise
     return str(home)
 
 
