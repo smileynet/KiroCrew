@@ -71,6 +71,7 @@ from kiro_crew.agent_sdk.backends import (
     ACP_BACKEND_DEEPSEEK,
     ACP_BACKEND_GOOSE,
     ACP_BACKEND_KAS,
+    ACP_BACKEND_KIMI,
     ACP_BACKEND_KIRO,
     ACP_BACKEND_MIMOCODE,
     ACP_BACKEND_OPENCODE,
@@ -959,6 +960,58 @@ AGENT_AUTH_DECLARATIONS: Tuple[AgentAuthDeclaration, ...] = (
             f"Google sign-in. {HOST_TERMINAL_NOTE}"
         ),
         signed_out_signature="No authentication method selected",
+        host_logout_retires_children=False,
+        entitlement_source=ENTITLEMENT_OWN_CREDENTIAL_FILE,
+    ),
+    AgentAuthDeclaration(
+        backend=ACP_BACKEND_KIMI,
+        # Kimi Code CLI keeps everything under one home (``~/.kimi-code``,
+        # relocated whole by ``KIMI_CODE_HOME``). Four leaves are fenced from the
+        # agent's file tools: ``credentials`` (OAuth tokens, 0600 files in a 0700
+        # directory), ``config.toml`` (an API key may sit under ``[providers.*]``),
+        # ``logs`` and ``sessions`` (each session's ``agents/*/wire.jsonl`` records
+        # request parameters and tool schemas). The floor names directories, not
+        # globs, so ``sessions`` is fenced whole rather than as ``wire.jsonl`` alone.
+        # TODO(capture): which of these the sandboxed child must still WRITE (logs,
+        # sessions) is unmeasured; every one is spared below until a capture says
+        # otherwise, because a masked directory the child cannot create fails every
+        # session at start.
+        credential_leaves=(
+            ".kimi-code/credentials",
+            ".kimi-code/config.toml",
+            ".kimi-code/logs",
+            ".kimi-code/sessions",
+        ),
+        # ``KIMI_CODE_HOME`` replaces the whole ``.kimi-code`` directory, so each leaf
+        # keeps its segments below it (the default spelling would keep only the last,
+        # which is the same here, but spelled out so a reader need not check).
+        home_override_env_vars=("KIMI_CODE_HOME",),
+        override_relative_leaves=("credentials", "config.toml", "logs", "sessions"),
+        # The harness authenticates ITSELF from ``credentials`` and may read its key
+        # from ``config.toml``; it writes ``logs`` and ``sessions`` as it runs. The
+        # read gate still refuses all four to the agent's file tools.
+        adapter_own_leaves=(
+            ".kimi-code/credentials",
+            ".kimi-code/config.toml",
+            ".kimi-code/logs",
+            ".kimi-code/sessions",
+        ),
+        sign_in_remedy=(
+            "Kimi Code CLI signs in on its own. In a terminal on the gateway host, run "
+            "kimi login (device-code sign-in) or /login inside kimi, then start a new "
+            f"chat. {HOST_TERMINAL_NOTE} Kiro Crew verifies Kimi Code CLI 2.7.2 only and "
+            "refuses other versions, and refuses the archived Python kimi-cli."
+        ),
+        signed_out_message=(
+            "Kimi Code CLI is not signed in. In a terminal on the gateway host, run "
+            "`kimi login`, complete the device-code sign-in, then start a new chat. "
+            f"{HOST_TERMINAL_NOTE}"
+        ),
+        # TODO(capture): copy the phrase from a live signed-out ``session/prompt`` or
+        # ``session/new`` error (the docs name ``authRequired`` / -32000 but the text
+        # is unobserved). Empty until then: a guessed phrase could turn a transient
+        # failure into a terminal one.
+        signed_out_signature="",
         host_logout_retires_children=False,
         entitlement_source=ENTITLEMENT_OWN_CREDENTIAL_FILE,
     ),
