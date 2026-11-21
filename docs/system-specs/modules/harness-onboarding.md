@@ -690,6 +690,24 @@ plugin (`VERIFIED_GATE_EXTENSION`, row 7 below).
 | residual | Two, both named rather than closed. The read-back's witness is Crew's own plugin rather than the harness, because this harness's ACP profile publishes nothing to ask. And the env-fed key is still IN the harness process's environment, so in `danger-full-access` — where the composition mounts no pid-namespace isolation — a shell child could read it out of `/proc`. Escalating to that mode is itself a `session/request_permission` this routing's gate sees, so it is two gated steps rather than the one ungated `open()` a credential carve-out would have left. |
 | 8 live spill | Reached twice. The first run reached it for six of the seven required classes; the seventh was captured off the same harness with the gate plugin composed. |
 
+### Option B: a Crew-owned home, so every write reaches the gate
+
+Measured on 2.7.2 (`reports/kimi-levers-acp.md`): in a git cwd `Write` and `Edit` run with no
+permission request, and `Read`, `Grep`, `Glob` and the web tools are on Kimi's default-approve
+list. The only way to give Kimi a config is `KIMI_CODE_HOME`, so Crew owns one.
+
+| Piece | Decision |
+|---|---|
+| Home | `prepare_kimi_home`: `<crew data>/kimi-home`, mode 0700, **one per install**, because each home needs its own device login. |
+| Sign-in | Its own: `KIMI_CODE_HOME=<crew data>/kimi-home kimi login` (`kimi_login_command`). Nothing is copied or linked from the person's home: Kimi rotates its refresh credential on each refresh, so two homes holding one sign each other out (observed in the levers run). A home with no regular `credentials/*.json` is refused at spawn with that command; an expired one is caught by the handshake check (`kimi_signed_out`) with the same command. |
+| Config | Rewritten at every spawn, last and atomically: `default_permission_mode = "manual"`, `[watch] enabled = false`, `ask` `Write`, `ask` `Edit`, `ask` `Read` (every path: a shared home cannot name one session's cwd, and a relative `Read(!./**)` never asks because picomatch matches `**` against any absolute path), `deny` `Write` and `Edit` under the home, and `[tools] disabled = KIMI_DISABLED_TOOLS` (`WebSearch`, `FetchURL`, `ReadMediaFile`, `mcp__*`, `Grep`, `Glob`). `Grep` and `Glob` match rules on the search pattern, not the path, and read any path unasked; `Bash` still asks. Only `default_model`, `providers`, `models` and `thinking` survive from what `kimi login` wrote. A home path holding a glob character is refused. |
+| Child env | `KIMI_CODE_HOME=<crew home>`, `KIMI_DISABLE_TELEMETRY=1`, `KIMI_CODE_NO_AUTO_UPDATE=1`. |
+| Approvals | `approve_always` is never offered (`build_permission_event` drops it for Kimi) and is answered `approve_once` (`approve_tool`), because a saved approval skips the ask rules, survives `session/load` and a new process, and is invisible to the tripwire. `sessions/` is not wiped (other live sessions share the home): no Crew path can send `approve_always`, so no saved approval can come from Crew. |
+| Mode | The `set_config_option(mode, default)` pin stays and runs after `session/new` and after `session/load` (the one call in `client_start`); Crew sends neither `session/resume` nor `session/fork` to Kimi. The read-back stays. |
+| `fs` | `fs.readTextFile` and `fs.writeTextFile` declared, `terminal` not (`acp/harness/kimi_fs.py`). `fs/write_text_file` is carried out only after an approved `Write`/`Edit` request for the same resolved path in the same turn, one write per approval; otherwise `-32000` (never `-32002`, which Kimi turns into a `mkdir` and a retry). The `AGENTS.md` probes answer `-32002`. Other reads pass the sensitive-path floor. |
+| Tripwire | A `HARNESS_UNASKED_TOOL_IDS` row: `TodoList`, `SetTodoList`, `TaskList`, `TaskOutput`, `WaitFor`, `CronList`, `AskUserQuestion`, `ExitPlanMode`, `Skill`, `select_tools`, `GetGoal`. `Agent` and `AgentSwarm` stay out: a subagent's calls carry no agent id and nothing shows every one of them asks, so a model that delegates ends the session. |
+| Not passed | `additionalDirectories` and `mcpServers`. |
+
 Two things this run produced that the checklist did not ask for.
 
 The first is a protocol divergence that turned out not to be one. This harness
@@ -1205,11 +1223,11 @@ named there is `pending capture`.
 |---|---|
 | 1 vocabulary | Done: `ACP_BACKEND_KIMI`, `PROVIDER_LABEL_KIMI`, policy name mapped, its own `kimi` model namespace. In `NOT_SHIPPED_SELECTABLE`, not in `BASELINE_SELECTABLE_BACKENDS`. |
 | 2 capability sets | Member of `ACP_BACKENDS_KNOWN`, `ACP_BACKENDS_SELF_SERVED_ACP` (derived from the launch row) and `ACP_BACKENDS_ACP_CLIENT_SPAWNABLE` (a code fact: `KimiLaunch` is registered). Out of every other set, and each of those is `pending capture` or follows from one that is, below. No set was joined on the strength of the docs alone. |
-| 3 spawn path | Done: a self-served `ACP_BACKEND_LAUNCH` row (`kimi acp`, `KIMI_BIN`, install `npm i -g @moonshot-ai/kimi-code@2.7.2`), `acp/harness/kimi.py` (`KimiLaunch`), `acp/client_kimi.py` and `acp/client_kimi_session.py`. The child gets `KIMI_DISABLE_TELEMETRY=1`. The handshake refuses an `agentInfo.name` other than `Kimi Code CLI` and any version other than `2.7.2`, which also refuses the legacy kimi-cli. A project `.kimi-code/` directory refuses the session (`kimi_repo_config_issue`). |
+| 3 spawn path | Done: a self-served `ACP_BACKEND_LAUNCH` row (`kimi acp`, `KIMI_BIN`, install `npm i -g @moonshot-ai/kimi-code@2.7.2`), `acp/harness/kimi.py` (`KimiLaunch`), `acp/client_kimi.py` and `acp/client_kimi_session.py`. The child runs out of a Crew-owned `KIMI_CODE_HOME` and gets `KIMI_DISABLE_TELEMETRY=1` and `KIMI_CODE_NO_AUTO_UPDATE=1` (Option B, below). The handshake refuses an `agentInfo.name` other than `Kimi Code CLI` and any version other than `2.7.2`, which also refuses the legacy kimi-cli. A project `.kimi-code/` directory refuses the session (`kimi_repo_config_issue`). |
 | 4 handshake | Done: `PROTOCOL_VERSION_KIMI`, its own constant, `1`. |
-| 5 auth declaration | Done: `own_credential_file`; `.kimi-code/credentials`, `config.toml`, `logs`, `sessions`, `oauth`, `device_id` and `user-history` on the floor, re-anchored under `KIMI_CODE_HOME`, all seven spared for the child. The floor names directories, so `sessions/*/wire.jsonl` is fenced as the whole `sessions` directory. `signed_out_signature` is empty (pending capture). Host-contract column added. |
+| 5 auth declaration | Done: `own_credential_file`; `.kimi-code/credentials`, `config.toml`, `logs`, `sessions`, `oauth`, `device_id` and `user-history` on the floor, re-anchored under `KIMI_CODE_HOME`, all seven masked from the child (it runs out of the Crew-owned home instead; `kimi-home` is on the floor and excluded from Kimi's mask alone). The floor names directories, so `sessions/*/wire.jsonl` is fenced as the whole `sessions` directory. `signed_out_signature` is empty (pending capture). Host-contract column added. |
 | 6 install probe | Done from the launch row. The release is read from the npm manifest and a `kimi` that is not `2.7.2` is reported missing with the pinned command. A build with no manifest (the legacy Python install) reads as unknown and is refused at the handshake. |
-| Routing | `Routing.SESSION_CONFIG`, `("mode", "default")`. Forbidden modes `yolo` and `auto`. The prompt-command allowlist admits compact, help, mcp, status, tasks and usage, so `/yolo`, `/auto`, `/login`, `/goal` and every skill command are refused before the wire. Crew writes the pin with `session/set_config_option` and never calls `session/set_mode`. |
+| Routing | `Routing.SESSION_CONFIG`, `("mode", "default")`. Forbidden modes `yolo` and `auto`. The prompt-command allowlist admits compact, help, mcp, status, tasks and usage, so `/yolo`, `/auto`, `/login`, `/goal` and every skill command are refused before the wire. Crew writes the pin with `session/set_config_option` and never calls `session/set_mode`: Kimi 2.7.2's handler runs the same `setMode` with no early return, so it also corrects a `yolo` config that `session/new` reports as `default` (`turn-live-yolo-config`). |
 | 7 selectability | **Not taken.** The MCP projection is declared `no-channel` (the launch adds nothing to the session array), so Crew's own tools are absent from a Kimi session. |
 
 ### Pending capture
@@ -1220,7 +1238,7 @@ is decided by a measurement that does not exist yet. Until it does, Kimi stays o
 | Decision | Why it waits | Where the TODO sits |
 |---|---|---|
 | `ACP_BACKENDS_SESSION_MCP_ARRAY`, `ACP_BACKENDS_PRUNE_UNSTARTABLE_MCP`, the MCP projection kind | no stdio server was observed mounted and called | `providers/mirrors/registry.py` |
-| `ACP_BACKENDS_UNASKED_NATIVE_TOOLS` and the `HARNESS_UNASKED_TOOL_IDS` row | the docs say reads run unasked in `default`; no turn was observed. The tripwire is armed with no row, so it is fail-closed | `acp/harness/kimi.py` |
+| ~~`ACP_BACKENDS_UNASKED_NATIVE_TOOLS` and the `HARNESS_UNASKED_TOOL_IDS` row~~ | Decided by Option B below: a member, with a row of read-only tools only | `acp/harness_tool_names.py` |
 | `ACP_BACKENDS_HONOR_ZERO_TOOL_BAN`, `ACP_BACKENDS_SIDE_READONLY` | follow from the unasked-tools answer | n/a |
 | `ACP_BACKENDS_COMPACT`, `INLINE_COMPACTION`, `HARNESS_MANAGED_COMPACTION`, `ACP_BACKEND_PROMPT_HANDLER_COMMANDS` | `/compact` is advertised; no compaction was driven | `agent_sdk/backends_routing.py` |
 | `ACP_BACKENDS_HARNESS_OWNED_SESSIONS`, `CWD_BOUND_SESSIONS`, `LOAD_WITHOUT_MODES`, `RESUME_WITHOUT_LOAD`, `SESSION_EVICTION`, `FORK_AT_MESSAGE` | `loadSession`, `resume`, `close` and `fork` are advertised; none was driven | n/a |
@@ -1228,8 +1246,9 @@ is decided by a measurement that does not exist yet. Until it does, Kimi stays o
 | `ACP_BACKENDS_STEER*`, `REPORT_USAGE`, `META_IDENTITY`, `INDEPENDENT_SETUP` | unmeasured | n/a |
 | The permission request shape for a shell call, the `config_option_update` and `current_mode_update` spellings, and whether a prompt can reach `/yolo` | no turn and no mode change was driven | `agent_sdk/backends_routing.py` |
 | `signed_out_signature` | no signed-out error text was captured | `agent_sdk/host_auth.py` |
-| Which of `logs` and `sessions` the sandboxed child must write | the sandbox was not run | `agent_sdk/host_auth.py` |
+| Whether the OS sandbox lets the child write its Crew-owned home | the live smoke ran unsandboxed; the leaf is declared read-write in `sandbox_leaves` and the governance-mask tests pin it, but no sandboxed Kimi turn was run | `sandbox_leaves.py` |
 | Whether a project `.kimi-code/` is already stopped by Kimi's workspace trust | headless behaviour unmeasured; refused on presence meanwhile | `acp/harness/kimi.py` |
+| A live Kimi turn under Crew's own home | the home needs its own device login, which only a person can complete | `acp/harness/kimi.py` |
 | Whether Crew's advertised `elicitation` capability sends Kimi's questions as `elicitation/create` | not driven | n/a |
 | Windows and macOS launch and install paths | the work was done on Linux only | n/a |
 
