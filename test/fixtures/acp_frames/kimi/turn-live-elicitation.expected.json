@@ -1,0 +1,115 @@
+[
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_call",
+        "title": "AskUserQuestion",
+        "tool_call_id": "1:tool-1",
+        "tool_kind": "other",
+        "wire_title": "AskUserQuestion"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "1:tool-1",
+        "tool_output": "{\"questions\":[{\"question\":\"Do you prefer red or blue?\",\"header\":\"Color\",\"options\":[{\"label\":\"Red\"},{\"label\":\"Blue\"}]}]}",
+        "tool_output_bytes": 119,
+        "tool_output_digest": "af7c3e256df9fea0f23f7a4ee346a4f4d4a7716565e6d6322ea363805c594c93",
+        "tool_status": "in_progress"
+      },
+      {
+        "kind": "tool_call_update",
+        "raw_tool_params": {
+          "questions": [
+            {
+              "header": "Color",
+              "options": [
+                {
+                  "label": "Red"
+                },
+                {
+                  "label": "Blue"
+                }
+              ],
+              "question": "Do you prefer red or blue?"
+            }
+          ]
+        },
+        "title": "Asking user questions",
+        "tool_call_id": "1:tool-1",
+        "tool_input": "{\n  \"questions\": [\n    {\n      \"question\": \"Do you prefer red or blue?\",\n      \"header\": \"Color\",\n      \"options\": [\n        {\n          \"label\": \"Red\"\n        },\n        {\n          \"label\": \"Blue\"\n        }\n      ]\n    }\n  ]\n}",
+        "tool_kind": "other",
+        "wire_title": "Asking user questions"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "elicitation",
+    "elicitation": {
+      "fields": [
+        {
+          "kind": "enum",
+          "name": "q0",
+          "options": [
+            {
+              "label": "Red",
+              "value": "Red"
+            },
+            {
+              "label": "Blue",
+              "value": "Blue"
+            }
+          ],
+          "required": true,
+          "title": "Color"
+        }
+      ],
+      "message": "Do you prefer red or blue?",
+      "mode": "form",
+      "request_id": "0",
+      "tool_call_id": "1:tool-1"
+    },
+    "frame": "elicitation/create"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "1:tool-1",
+        "tool_final": true,
+        "tool_output": "{\"answers\":{},\"note\":\"User dismissed the question without answering.\"}",
+        "tool_output_bytes": 70,
+        "tool_output_digest": "cae09626ca7023f960cae882f810bf4b0f8dcffcee748951777f404bfad3eed9",
+        "tool_status": "completed"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "frame": "response",
+    "id": 11,
+    "stop_reason": "end_turn"
+  },
+  {
+    "action": "update",
+    "events": [],
+    "frame": "session/update",
+    "session_update": "usage_update",
+    "usage": [
+      13484,
+      1048576
+    ],
+    "usage_cost": null
+  }
+]

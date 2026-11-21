@@ -1,0 +1,117 @@
+[
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_call",
+        "title": "mcp__echo__echo_word",
+        "tool_call_id": "2:tool-1",
+        "tool_kind": "other",
+        "wire_title": "mcp__echo__echo_word"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "2:tool-1",
+        "tool_output": "{}",
+        "tool_output_bytes": 2,
+        "tool_output_digest": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+        "tool_status": "in_progress"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "permission",
+    "events": [
+      {
+        "kind": "permission_request",
+        "mcp_identity_trusted": true,
+        "options": [
+          {
+            "id": "approve_once",
+            "label": "Approve once"
+          },
+          {
+            "id": "approve_always",
+            "label": "Approve for this session"
+          },
+          {
+            "id": "reject",
+            "label": "Reject"
+          }
+        ],
+        "request_id": 1,
+        "shell_classified": true,
+        "title": "mcp__echo__echo_word",
+        "tool_call_id": "2:tool-1"
+      }
+    ],
+    "frame": "session/request_permission",
+    "recorded_options": {
+      "always": "approve_always",
+      "once": "approve_once",
+      "reject": "reject"
+    }
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "2:tool-1",
+        "tool_output": "{}",
+        "tool_output_bytes": 2,
+        "tool_output_digest": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+        "tool_status": "in_progress"
+      },
+      {
+        "kind": "tool_call_update",
+        "title": "mcp__echo__echo_word",
+        "tool_call_id": "2:tool-1",
+        "tool_kind": "other",
+        "wire_title": "mcp__echo__echo_word"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "2:tool-1",
+        "tool_output": "Tool \"mcp__echo__echo_word\" was not run because the user rejected the approval request.",
+        "tool_output_bytes": 87,
+        "tool_output_digest": "4851466a1aad68c584b43022fa7a59eef3452dda63757306f047aa92c69a6a88",
+        "tool_status": "failed"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "frame": "response",
+    "id": 12,
+    "stop_reason": "end_turn"
+  },
+  {
+    "action": "update",
+    "events": [],
+    "frame": "session/update",
+    "session_update": "usage_update",
+    "usage": [
+      13721,
+      1048576
+    ],
+    "usage_cost": null
+  }
+]

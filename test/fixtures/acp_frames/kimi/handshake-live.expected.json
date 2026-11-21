@@ -1,0 +1,219 @@
+[
+  {
+    "agent_capabilities": {
+      "auth": {
+        "logout": {}
+      },
+      "loadSession": true,
+      "mcpCapabilities": {
+        "http": true,
+        "sse": true
+      },
+      "promptCapabilities": {
+        "audio": false,
+        "embeddedContext": true,
+        "image": true
+      },
+      "sessionCapabilities": {
+        "additionalDirectories": {},
+        "close": {},
+        "delete": {},
+        "fork": {},
+        "list": {},
+        "resume": {}
+      }
+    },
+    "agent_version": "2.7.2",
+    "frame": "response",
+    "id": 1,
+    "protocol_version": 1
+  },
+  {
+    "config_options": [
+      {
+        "category": "model",
+        "currentValue": "kimi-code/kimi-for-coding",
+        "id": "model",
+        "name": "Model",
+        "options": [
+          {
+            "name": "K2.8 Preview",
+            "value": "kimi-code/kimi-for-coding"
+          }
+        ],
+        "type": "select"
+      },
+      {
+        "category": "thought_level",
+        "currentValue": "max",
+        "id": "thinking",
+        "name": "Thinking",
+        "options": [
+          {
+            "name": "Thinking Low",
+            "value": "low"
+          },
+          {
+            "name": "Thinking High",
+            "value": "high"
+          },
+          {
+            "name": "Thinking Max",
+            "value": "max"
+          }
+        ],
+        "type": "select"
+      },
+      {
+        "category": "mode",
+        "currentValue": "default",
+        "id": "mode",
+        "name": "Mode",
+        "options": [
+          {
+            "description": "Manual approvals; tools execute normally.",
+            "name": "Default",
+            "value": "default"
+          },
+          {
+            "description": "Read-only planning; no tool execution.",
+            "name": "Plan",
+            "value": "plan"
+          },
+          {
+            "description": "Auto-approve safe operations.",
+            "name": "Auto",
+            "value": "auto"
+          },
+          {
+            "description": "Auto-approve everything.",
+            "name": "YOLO",
+            "value": "yolo"
+          }
+        ],
+        "type": "select"
+      }
+    ],
+    "frame": "response",
+    "id": 2,
+    "modes": {
+      "advertised": true,
+      "current": "default",
+      "ids": [
+        "default",
+        "plan",
+        "auto",
+        "yolo"
+      ]
+    },
+    "session_id": "kimi-session-1"
+  },
+  {
+    "action": "update",
+    "events": [],
+    "frame": "session/update",
+    "session_update": "current_mode_update"
+  },
+  {
+    "action": "update",
+    "events": [],
+    "frame": "session/update",
+    "session_update": "config_option_update"
+  },
+  {
+    "frame": "response",
+    "id": 3
+  },
+  {
+    "error": {
+      "code": -32602,
+      "data": {
+        "modeId": "bogus"
+      },
+      "message": "Invalid params: Unknown modeId: bogus"
+    },
+    "frame": "response",
+    "id": 6
+  },
+  {
+    "action": "update",
+    "events": [],
+    "frame": "session/update",
+    "session_update": "current_mode_update"
+  },
+  {
+    "action": "update",
+    "events": [],
+    "frame": "session/update",
+    "session_update": "config_option_update"
+  },
+  {
+    "config_options": [
+      {
+        "category": "model",
+        "currentValue": "kimi-code/kimi-for-coding",
+        "id": "model",
+        "name": "Model",
+        "options": [
+          {
+            "name": "K2.8 Preview",
+            "value": "kimi-code/kimi-for-coding"
+          }
+        ],
+        "type": "select"
+      },
+      {
+        "category": "thought_level",
+        "currentValue": "max",
+        "id": "thinking",
+        "name": "Thinking",
+        "options": [
+          {
+            "name": "Thinking Low",
+            "value": "low"
+          },
+          {
+            "name": "Thinking High",
+            "value": "high"
+          },
+          {
+            "name": "Thinking Max",
+            "value": "max"
+          }
+        ],
+        "type": "select"
+      },
+      {
+        "category": "mode",
+        "currentValue": "plan",
+        "id": "mode",
+        "name": "Mode",
+        "options": [
+          {
+            "description": "Manual approvals; tools execute normally.",
+            "name": "Default",
+            "value": "default"
+          },
+          {
+            "description": "Read-only planning; no tool execution.",
+            "name": "Plan",
+            "value": "plan"
+          },
+          {
+            "description": "Auto-approve safe operations.",
+            "name": "Auto",
+            "value": "auto"
+          },
+          {
+            "description": "Auto-approve everything.",
+            "name": "YOLO",
+            "value": "yolo"
+          }
+        ],
+        "type": "select"
+      }
+    ],
+    "frame": "response",
+    "id": 8
+  }
+]

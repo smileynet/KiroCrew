@@ -1,0 +1,214 @@
+[
+  {
+    "action": "update",
+    "events": [],
+    "frame": "session/update",
+    "session_update": "user_message_chunk"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "thinking_chunk",
+        "text": "The user wants a simple file creation. Use Write tool with hello.txt containing \"hi\". Nothing else."
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "agent_thought_chunk",
+    "text_chunk": {
+      "text": "The user wants a simple file creation. Use Write tool with hello.txt containing \"hi\". Nothing else.",
+      "thinking": true
+    }
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_call",
+        "raw_tool_params": {
+          "content": "hi\n",
+          "path": "hello.txt"
+        },
+        "title": "Write",
+        "tool_call_id": "1:tool-1",
+        "tool_input": "{\n  \"path\": \"hello.txt\",\n  \"content\": \"hi\\n\"\n}",
+        "tool_kind": "edit",
+        "wire_title": "Write"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "1:tool-1",
+        "tool_final": true,
+        "tool_output": "Wrote 3 bytes to hello.txt",
+        "tool_output_bytes": 26,
+        "tool_output_digest": "764f5c3a34650636939eaa2f03d7ca2b6f6c1d0ebf3e4fa37ea3e470198bd9dc",
+        "tool_status": "completed"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "text_chunk",
+        "text": "Created hello.txt with the word \"hi\"."
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "agent_message_chunk",
+    "text_chunk": {
+      "text": "Created hello.txt with the word \"hi\".",
+      "thinking": false
+    }
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_call",
+        "raw_tool_params": {
+          "questions": [
+            {
+              "header": "Color",
+              "options": [
+                {
+                  "label": "Red"
+                },
+                {
+                  "label": "Blue"
+                }
+              ],
+              "question": "Do you prefer red or blue?"
+            }
+          ]
+        },
+        "title": "AskUserQuestion",
+        "tool_call_id": "3:tool-2",
+        "tool_input": "{\n  \"questions\": [\n    {\n      \"question\": \"Do you prefer red or blue?\",\n      \"header\": \"Color\",\n      \"options\": [\n        {\n          \"label\": \"Red\"\n        },\n        {\n          \"label\": \"Blue\"\n        }\n      ]\n    }\n  ]\n}",
+        "tool_kind": "other",
+        "wire_title": "AskUserQuestion"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "3:tool-2",
+        "tool_final": true,
+        "tool_output": "{\"answers\":{},\"note\":\"User dismissed the question without answering.\"}",
+        "tool_output_bytes": 70,
+        "tool_output_digest": "cae09626ca7023f960cae882f810bf4b0f8dcffcee748951777f404bfad3eed9",
+        "tool_status": "completed"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "text_chunk",
+        "text": "The question was dismissed without an answer. Stopping here."
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "agent_message_chunk",
+    "text_chunk": {
+      "text": "The question was dismissed without an answer. Stopping here.",
+      "thinking": false
+    }
+  },
+  {
+    "config_options": [
+      {
+        "category": "model",
+        "currentValue": "kimi-code/kimi-for-coding",
+        "id": "model",
+        "name": "Model",
+        "options": [
+          {
+            "name": "K2.8 Preview",
+            "value": "kimi-code/kimi-for-coding"
+          }
+        ],
+        "type": "select"
+      },
+      {
+        "category": "thought_level",
+        "currentValue": "max",
+        "id": "thinking",
+        "name": "Thinking",
+        "options": [
+          {
+            "name": "Thinking Low",
+            "value": "low"
+          },
+          {
+            "name": "Thinking High",
+            "value": "high"
+          },
+          {
+            "name": "Thinking Max",
+            "value": "max"
+          }
+        ],
+        "type": "select"
+      },
+      {
+        "category": "mode",
+        "currentValue": "default",
+        "id": "mode",
+        "name": "Mode",
+        "options": [
+          {
+            "description": "Manual approvals; tools execute normally.",
+            "name": "Default",
+            "value": "default"
+          },
+          {
+            "description": "Read-only planning; no tool execution.",
+            "name": "Plan",
+            "value": "plan"
+          },
+          {
+            "description": "Auto-approve safe operations.",
+            "name": "Auto",
+            "value": "auto"
+          },
+          {
+            "description": "Auto-approve everything.",
+            "name": "YOLO",
+            "value": "yolo"
+          }
+        ],
+        "type": "select"
+      }
+    ],
+    "frame": "response",
+    "id": 2,
+    "modes": {
+      "advertised": true,
+      "current": "default",
+      "ids": [
+        "default",
+        "plan",
+        "auto",
+        "yolo"
+      ]
+    }
+  }
+]

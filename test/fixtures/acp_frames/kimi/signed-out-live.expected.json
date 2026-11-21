@@ -1,0 +1,109 @@
+[
+  {
+    "agent_capabilities": {
+      "auth": {
+        "logout": {}
+      },
+      "loadSession": true,
+      "mcpCapabilities": {
+        "http": true,
+        "sse": true
+      },
+      "promptCapabilities": {
+        "audio": false,
+        "embeddedContext": true,
+        "image": true
+      },
+      "sessionCapabilities": {
+        "additionalDirectories": {},
+        "close": {},
+        "delete": {},
+        "fork": {},
+        "list": {},
+        "resume": {}
+      }
+    },
+    "agent_version": "2.7.2",
+    "frame": "response",
+    "id": 1,
+    "protocol_version": 1
+  },
+  {
+    "config_options": [
+      {
+        "category": "model",
+        "currentValue": "kimi-code/kimi-for-coding",
+        "id": "model",
+        "name": "Model",
+        "options": [
+          {
+            "name": "K2.7 Coding",
+            "value": "kimi-code/kimi-for-coding"
+          }
+        ],
+        "type": "select"
+      },
+      {
+        "category": "thought_level",
+        "currentValue": "on",
+        "id": "thinking",
+        "name": "Thinking",
+        "options": [
+          {
+            "name": "Thinking On",
+            "value": "on"
+          }
+        ],
+        "type": "select"
+      },
+      {
+        "category": "mode",
+        "currentValue": "default",
+        "id": "mode",
+        "name": "Mode",
+        "options": [
+          {
+            "description": "Manual approvals; tools execute normally.",
+            "name": "Default",
+            "value": "default"
+          },
+          {
+            "description": "Read-only planning; no tool execution.",
+            "name": "Plan",
+            "value": "plan"
+          },
+          {
+            "description": "Auto-approve safe operations.",
+            "name": "Auto",
+            "value": "auto"
+          },
+          {
+            "description": "Auto-approve everything.",
+            "name": "YOLO",
+            "value": "yolo"
+          }
+        ],
+        "type": "select"
+      }
+    ],
+    "frame": "response",
+    "id": 2,
+    "modes": {
+      "advertised": true,
+      "current": "default",
+      "ids": [
+        "default",
+        "plan",
+        "auto",
+        "yolo"
+      ]
+    },
+    "session_id": "kimi-session-1"
+  },
+  {
+    "action": "update",
+    "events": [],
+    "frame": "session/update",
+    "session_update": "session_info_update"
+  }
+]

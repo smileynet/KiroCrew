@@ -1,0 +1,123 @@
+[
+  {
+    "action": "update",
+    "events": [
+      {
+        "is_shell": true,
+        "kind": "tool_call",
+        "title": "Bash",
+        "tool_call_id": "3:tool-1",
+        "tool_kind": "execute",
+        "wire_title": "Bash"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "3:tool-1",
+        "tool_output": "{\"command\":\"echo hi\"}",
+        "tool_output_bytes": 21,
+        "tool_output_digest": "1eab1ef18bb109ae99f48bfe7efaba9dde08e27bdb46438214bd6c65eb3ff2ff",
+        "tool_status": "in_progress"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "permission",
+    "events": [
+      {
+        "is_shell": true,
+        "kind": "permission_request",
+        "mcp_identity_trusted": true,
+        "options": [
+          {
+            "id": "approve_once",
+            "label": "Approve once"
+          },
+          {
+            "id": "approve_always",
+            "label": "Approve for this session"
+          },
+          {
+            "id": "reject",
+            "label": "Reject"
+          }
+        ],
+        "shell_classified": true,
+        "title": "Bash",
+        "tool_call_id": "3:tool-1"
+      }
+    ],
+    "frame": "session/request_permission",
+    "recorded_options": {
+      "always": "approve_always",
+      "once": "approve_once",
+      "reject": "reject"
+    }
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "3:tool-1",
+        "tool_output": "{\"command\":\"echo hi\"}",
+        "tool_output_bytes": 21,
+        "tool_output_digest": "1eab1ef18bb109ae99f48bfe7efaba9dde08e27bdb46438214bd6c65eb3ff2ff",
+        "tool_status": "in_progress"
+      },
+      {
+        "is_shell": true,
+        "kind": "tool_call_update",
+        "raw_tool_params": {
+          "command": "echo hi"
+        },
+        "title": "echo hi",
+        "tool_call_id": "3:tool-1",
+        "tool_input": "{\n  \"command\": \"echo hi\"\n}",
+        "tool_kind": "execute",
+        "wire_title": "Running: echo hi"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "3:tool-1",
+        "tool_output": "Tool \"Bash\" was not run because the user rejected the approval request.",
+        "tool_output_bytes": 71,
+        "tool_output_digest": "7b90376aa8d67c5893e57cec527bf1a42f9e0c6f73c40e2531e03cf68064122e",
+        "tool_status": "failed"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "frame": "response",
+    "id": 3,
+    "stop_reason": "end_turn"
+  },
+  {
+    "action": "update",
+    "events": [],
+    "frame": "session/update",
+    "session_update": "usage_update",
+    "usage": [
+      13956,
+      1048576
+    ],
+    "usage_cost": null
+  }
+]

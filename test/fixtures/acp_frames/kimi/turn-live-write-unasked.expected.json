@@ -1,0 +1,141 @@
+[
+  {
+    "action": "update",
+    "events": [],
+    "frame": "session/update",
+    "session_update": "session_info_update"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_call",
+        "title": "Write",
+        "tool_call_id": "0:tool-1",
+        "tool_kind": "edit",
+        "wire_title": "Write"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "0:tool-1",
+        "tool_output": "{\"path\":\"hello.txt\",\"content\":\"",
+        "tool_output_bytes": 31,
+        "tool_output_digest": "524ce23b0c1dbdca8de4d9966390142e2d4326b939a6b05827228ea81a9e16b3",
+        "tool_status": "in_progress"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "0:tool-1",
+        "tool_output": "{\"path\":\"hello.txt\",\"content\":\"hi\\n\"}",
+        "tool_output_bytes": 37,
+        "tool_output_digest": "cbd9f97987f321fe3a851801981fb8294d23c3dce81ab5297bc5e43bb10160f6",
+        "tool_status": "in_progress"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "0:tool-1",
+        "tool_output": "{\"path\":\"hello.txt\",\"content\":\"hi\\n\"}",
+        "tool_output_bytes": 37,
+        "tool_output_digest": "cbd9f97987f321fe3a851801981fb8294d23c3dce81ab5297bc5e43bb10160f6",
+        "tool_status": "in_progress"
+      },
+      {
+        "kind": "tool_call_update",
+        "raw_tool_params": {
+          "content": "hi\n",
+          "path": "hello.txt"
+        },
+        "title": "Writing hello.txt",
+        "tool_call_id": "0:tool-1",
+        "tool_input": "{\n  \"path\": \"hello.txt\",\n  \"content\": \"hi\\n\"\n}",
+        "tool_kind": "edit",
+        "wire_title": "Writing hello.txt"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "0:tool-1",
+        "tool_final": true,
+        "tool_output": "Wrote 3 bytes to hello.txt",
+        "tool_output_bytes": 26,
+        "tool_output_digest": "764f5c3a34650636939eaa2f03d7ca2b6f6c1d0ebf3e4fa37ea3e470198bd9dc",
+        "tool_status": "completed"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "text_chunk",
+        "text": "hi"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "agent_message_chunk",
+    "text_chunk": {
+      "text": "hi",
+      "thinking": false
+    }
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "text_chunk",
+        "text": "\"."
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "agent_message_chunk",
+    "text_chunk": {
+      "text": "\".",
+      "thinking": false
+    }
+  },
+  {
+    "frame": "response",
+    "id": 10,
+    "stop_reason": "end_turn"
+  },
+  {
+    "action": "update",
+    "events": [],
+    "frame": "session/update",
+    "session_update": "usage_update",
+    "usage": [
+      13239,
+      1048576
+    ],
+    "usage_cost": null
+  }
+]
