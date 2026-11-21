@@ -178,6 +178,25 @@ def _open_workers() -> int | None:
         return None
 
 
+def _warming_workers() -> int:
+    """Open hub workers admitted less than ``_SETTLE_AFTER_SECS`` ago, or 0.
+
+    Their memory is not in the free reading yet, so each still reserves one
+    estimate. 0 when the store cannot be read, as :func:`_open_workers` reserves
+    nothing then. shortcut: age of the mailbox item stands for "settled"; this
+    crew's sampler is per subagent row, not per worker slot. Upgrade when a
+    worker slot exposes its own sample count.
+    """
+    from kiro_crew.remote_dispatch_mailbox import open_mailbox_workers
+    from kiro_crew.subagent_parts.run_limits import _SETTLE_AFTER_SECS
+
+    try:
+        return open_mailbox_workers(_SETTLE_AFTER_SECS)
+    except Exception:
+        logger.warning("remote dispatch: warming hub workers unreadable", exc_info=True)
+        return 0
+
+
 #: Serialises the final admission: the count, the gate and the binding write
 #: read as one step, so two concurrent creates cannot both take the last room.
 _admission_lock = threading.Lock()
@@ -248,7 +267,9 @@ def measure(settings: RemoteDispatchSettings) -> tuple[dict[str, Any], str]:
         "tags": list(settings.tags),
         "measured_at": round(time.time(), 3),
     }
-    return headroom, _short_resource(settings, posture, load_per_cpu, disk_free, open_workers or 0)
+    return headroom, _short_resource(
+        settings, posture, load_per_cpu, disk_free, open_workers or 0, _warming_workers()
+    )
 
 
 def _short_resource(
@@ -257,21 +278,25 @@ def _short_resource(
     load_per_cpu: float | None,
     disk_free: float | None,
     open_workers: int = 0,
+    warming_workers: int = 0,
 ) -> str:
     """The first short resource, or "".
 
-    Each open hub worker reserves one estimate of memory and disk, so a worker
-    admitted but not yet using either still counts: free memory or disk minus
-    ``open_workers`` estimates must hold one more estimate. A running worker is
-    counted in the free reading and again here, the same deliberate overcount
-    the hub's reservations make (RFC §2b).
+    Disk: each open hub worker reserves one estimate, so free disk minus
+    ``open_workers`` estimates must hold one more estimate.
+
+    Memory: the free reading already excludes a running worker's memory, so only
+    a worker admitted but not yet showing it (``warming_workers``) reserves an
+    estimate: free memory must hold ``warming_workers + 1`` estimates, the one
+    being for the worker asking now. A settled worker is not charged again, so
+    the bar does not grow with the number of workers already running.
     """
     from kiro_crew import resource_status
     from kiro_crew.subagent import check_memory_available
 
     wanted = open_workers + 1
     try:
-        memory_ok, _ = check_memory_available(settings.memory_gb * wanted)
+        memory_ok, _ = check_memory_available(settings.memory_gb * (warming_workers + 1))
     except Exception:
         logger.warning("remote dispatch: memory check failed", exc_info=True)
         memory_ok = True

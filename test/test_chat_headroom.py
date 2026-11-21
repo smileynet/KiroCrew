@@ -10,6 +10,7 @@ unchanged.
 from __future__ import annotations
 
 import json
+import time
 from types import SimpleNamespace
 
 import pytest
@@ -551,6 +552,49 @@ def test_each_open_hub_worker_reserves_one_memory_estimate(monkeypatch, host, n,
     snap, got = headroom_mod.measure(headroom_mod.RemoteDispatchSettings(True, 5.0, 1.0))
     assert snap["open_workers"] == n
     assert got == short
+
+
+def _workers_settle(monkeypatch) -> None:
+    """Move the clock the mailbox reads past the settle window."""
+    from kiro_crew import remote_dispatch_mailbox as mailbox
+
+    later = SimpleNamespace(time=lambda: time.time() + 10_000.0)
+    monkeypatch.setattr(mailbox, "time", later)
+
+
+@pytest.mark.parametrize("n", [0, 1, 2])
+@pytest.mark.parametrize(("delta", "short"), [(0.01, ""), (-0.01, "memory")])
+def test_settled_workers_are_not_charged_again(monkeypatch, host, n, delta, short):
+    """Their memory is already out of the free reading: the bar stays one estimate."""
+    for i in range(n):
+        _hub_worker(i + 1)
+    _workers_settle(monkeypatch)
+    _memory_is(monkeypatch, 5.0 + delta)
+    snap, got = headroom_mod.measure(headroom_mod.RemoteDispatchSettings(True, 5.0, 1.0))
+    assert snap["open_workers"] == n
+    assert got == short
+
+
+def test_a_burst_of_unsettled_binds_does_not_all_pass(monkeypatch, host):
+    from kiro_crew import remote_dispatch_mailbox as mailbox
+
+    _memory_is(monkeypatch, 5.0 + 0.01)
+    results = [
+        headroom_mod.bind_if_room(
+            _ROOM_FOR_ONE, mailbox.parse_work_item(_bindable(i + 1)), f"chat-w{i + 1}"
+        )[1]
+        for i in range(3)
+    ]
+    assert results == ["", "memory", "memory"]
+
+
+def test_critical_posture_refuses_with_settled_workers(monkeypatch, host):
+    _hub_worker(1)
+    _workers_settle(monkeypatch)
+    _memory_is(monkeypatch, 500.0)
+    host.status = _status(posture=resource_status.POSTURE_CRITICAL)
+    _, short = headroom_mod.measure(headroom_mod.RemoteDispatchSettings(True, 5.0, 1.0))
+    assert short == "memory"
 
 
 @pytest.mark.parametrize(("delta", "short"), [(0.01, ""), (-0.01, "disk")])

@@ -447,8 +447,10 @@ class WorkLedgerConfig:
         metadata=_meta(
             "Remote dispatch memory estimate (GB)",
             "Free memory one dispatched worker needs. A work-item create is refused "
-            "as crew_busy when less is free. The default covers the largest measured "
-            "worker session process tree. Used only with remote_dispatch on; a "
+            "as crew_busy when less is free, plus this much again for each worker "
+            "admitted in the last two reaper sweeps (its memory is not in the free "
+            "reading yet); a settled worker is not charged again. The default covers "
+            "the largest measured worker session process tree. Used only with remote_dispatch on; a "
             "value that is not a positive number uses the default.",
         ),
     )

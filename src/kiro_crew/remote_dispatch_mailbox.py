@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import dataclasses
 import logging
+import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
@@ -55,6 +56,7 @@ from kiro_crew.work_ledger import (
     item_events_path,
     item_lock,
     item_path,
+    parse_stamp,
     read_binding,
     read_events,
     read_work_item,
@@ -280,8 +282,11 @@ def bound_mailbox(worker_slot_key: str) -> tuple[str, str] | None:
     return binding
 
 
-def open_mailbox_workers() -> int:
+def open_mailbox_workers(warming_s: float | None = None) -> int:
     """Worker slots on this crew bound to an open hub mailbox item. BLOCKING.
+
+    With *warming_s*, only items created less than that many seconds ago: the
+    workers admitted too recently for their memory to show in the free reading.
 
     Walks the binding files. A binding counts when its board is a ``hub:`` board
     and its item is open and names the worker back, the test :func:`close_mailbox`
@@ -292,6 +297,7 @@ def open_mailbox_workers() -> int:
     root = bindings_dir()
     if not root.is_dir():
         return 0
+    cutoff = None if warming_s is None else time.time() - warming_s
     count = 0
     for path in root.glob("*.json"):
         raw = _read_json_record(path, strict=False)
@@ -306,8 +312,14 @@ def open_mailbox_workers() -> int:
             item = read_work_item(board, item_id)
         except WorkLedgerError:
             continue
-        if item is not None and not item.is_terminal and item.worker_session_key == worker:
-            count += 1
+        if item is None or item.is_terminal or item.worker_session_key != worker:
+            continue
+        if cutoff is not None:
+            created = parse_stamp(item.created_at)
+            # An unreadable stamp is not known to be old, so it still reserves.
+            if created is not None and created.timestamp() <= cutoff:
+                continue
+        count += 1
     return count
 
 
