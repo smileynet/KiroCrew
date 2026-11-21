@@ -823,3 +823,96 @@ async def test_the_live_unasked_write_capture_still_trips_and_the_asked_one_does
 def test_the_disabled_tools_are_one_named_constant() -> None:
     assert isinstance(kimi_mod.KIMI_DISABLED_TOOLS, tuple)
     assert not hasattr(kimi_mod, "KIMI_SEED_LEAVES")
+
+
+# ── 8. edge cases from the live edge round (reports/kimi-edge-tests.md) ─────
+
+
+@pytest.mark.asyncio
+async def test_a_load_of_a_yolo_session_reports_default_and_crew_still_writes_the_pin(
+    tmp_path: Path,
+) -> None:
+    """Case 7: ``session/load`` of a session saved in yolo reports ``default`` while yolo is
+    live, and Bash ran with no request. The report cannot be trusted, so the pin is written
+    whatever the load said. Kimi 2.7.2's ``setSessionConfigOption`` for ``mode`` calls the same
+    ``AcpSession.setMode`` -> ``agent.setPermission`` as ``session/set_mode``, with no early
+    return on an unchanged value, so the write restores asking the way ``set_mode`` did in the
+    capture (its ``current_mode_update`` and ``config_option_update`` are replayed below)."""
+    frames = _frames("session-load-yolo-live")
+    load = next(f for f in frames if "modes" in (f.get("result") or {}))
+    assert load["result"]["modes"]["currentModeId"] == "default"
+    reported = [o for o in load["result"]["configOptions"] if o["id"] == "mode"]
+    assert reported[0]["currentValue"] == "default"
+    updates = [
+        f["params"]["update"]
+        for f in frames
+        if f.get("method") == "session/update"
+        and f["params"]["update"].get("sessionUpdate") in ("tool_call", "tool_call_update")
+    ]
+    bash = next(u["toolCallId"] for u in updates if u.get("title") == "Bash")
+    assert not any(f.get("method") == "session/request_permission" for f in frames)
+    assert any(u.get("status") == "completed" and u["toolCallId"] == bash for u in updates)
+
+    client = _client(tmp_path)
+    client._acp_config_options = load["result"]["configOptions"]
+    written: list[tuple[str, str]] = []
+    after = [
+        f["params"]["update"]
+        for f in frames
+        if f.get("method") == "session/update"
+        and f["params"]["update"].get("sessionUpdate") == "config_option_update"
+    ]
+
+    async def _write(config_id: str, value: str) -> None:
+        written.append((config_id, value))
+        client._acp_config_options = after[-1]["configOptions"]
+
+    client.set_config_option = _write  # type: ignore[method-assign]
+    await client._apply_session_permission_routing()
+    # Written although the load already said ``default``, and the read-back finds no drift.
+    assert written == [("mode", "default")]
+    assert session_config_drift_issue(KIMI, after[-1]) == ""
+
+
+def test_a_load_is_followed_by_the_pin_on_the_one_start_path() -> None:
+    """The load branch and the new branch of ``_initialize_session`` both fall through to the
+    single routing write, so a resumed Kimi session is never prompted before the pin."""
+    root = Path(__file__).resolve().parents[1] / "src" / "kiro_crew" / "acp"
+    start = (root / "client_start.py").read_text()
+    body = start[start.index("async def _initialize_session") :]
+    body = body[: body.index("\nasync def ", 10)]
+    assert body.count("await self._apply_session_permission_routing()") == 1
+    assert body.index("METHOD_SESSION_LOAD") < body.index(
+        "await self._apply_session_permission_routing()"
+    )
+
+
+def test_auto_stays_forbidden_because_it_ignores_ask_rules() -> None:
+    """Case 2: in ``auto`` Kimi ignores every ask rule, so it is refused like ``yolo``."""
+    from kiro_crew.agent_sdk.backends import ACP_BACKEND_FORBIDDEN_MODES
+
+    assert ACP_BACKEND_FORBIDDEN_MODES[KIMI] == frozenset({"yolo", "auto"})
+    assert session_config_drift_issue(
+        KIMI, {"sessionUpdate": "current_mode_update", "currentModeId": "auto"}
+    )
+
+
+def test_crew_writes_no_hook_so_no_guarantee_rests_on_one() -> None:
+    """Case 3: Kimi's PreToolUse hooks fail open on a timeout and on exit 1."""
+    config = tomllib.loads(kimi_mod.render_kimi_config("/crew/kimi-home"))
+    assert "hooks" not in config
+
+
+def test_signed_out_at_session_new_is_the_signed_out_remedy() -> None:
+    """Windows (flamingdragon, Node 24.17): signed out, ``session/new`` fails with -32000
+    "Authentication required" instead of narrowing the thinking select."""
+    from kiro_crew.acp.transport_errors import AcpError, _raise_acp_error
+    from kiro_crew.agent_sdk import host_auth
+
+    frame = {"code": -32000, "message": "Authentication required"}
+    # What the start path sees, as the live log printed it.
+    assert host_auth.reports_signed_out(KIMI, f"JSON-RPC error: {frame}")
+    assert not host_auth.reports_signed_out("codex", f"JSON-RPC error: {frame}")
+    with pytest.raises(AcpError) as raised:
+        _raise_acp_error(frame, backend=KIMI)
+    assert "kimi-home kimi login" in str(raised.value)

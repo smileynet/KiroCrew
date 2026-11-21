@@ -1022,12 +1022,13 @@ AGENT_AUTH_DECLARATIONS: Tuple[AgentAuthDeclaration, ...] = (
             "`KIMI_CODE_HOME=~/.kiro/crew/kimi-home kimi login`), complete the device-code "
             f"sign-in, then start a new chat. {HOST_TERMINAL_NOTE}"
         ),
-        # Empty: signed out, 2.7.2 answers ``session/prompt`` with nothing (no -32000,
-        # no error text), so there is no phrase to copy. The client reads the sign-in
-        # from the handshake instead (``harness.kimi.kimi_signed_out``), and the spawn
-        # refuses a home with no credential file (``harness.kimi.prepare_kimi_home``); both
-        # name the exact command for this install's home.
-        signed_out_signature="",
+        # Kimi 2.7.2 says "signed out" three ways, and each is read: on Windows
+        # (flamingdragon, Node 24.17) ``session/new`` fails with -32000 "Authentication
+        # required" (this phrase, so the start path fails fast with the remedy above
+        # instead of a respawn); on Linux ``session/new`` succeeds and only the
+        # ``thinking`` select narrows (``harness.kimi.kimi_signed_out``); and the spawn
+        # refuses a home with no credential file (``harness.kimi.prepare_kimi_home``).
+        signed_out_signature="Authentication required",
         host_logout_retires_children=False,
         entitlement_source=ENTITLEMENT_OWN_CREDENTIAL_FILE,
     ),

@@ -1,0 +1,291 @@
+[
+  {
+    "config_options": [
+      {
+        "category": "model",
+        "currentValue": "kimi-code/kimi-for-coding",
+        "id": "model",
+        "name": "Model",
+        "options": [
+          {
+            "name": "K2.8 Preview",
+            "value": "kimi-code/kimi-for-coding"
+          }
+        ],
+        "type": "select"
+      },
+      {
+        "category": "thought_level",
+        "currentValue": "max",
+        "id": "thinking",
+        "name": "Thinking",
+        "options": [
+          {
+            "name": "Thinking Low",
+            "value": "low"
+          },
+          {
+            "name": "Thinking High",
+            "value": "high"
+          },
+          {
+            "name": "Thinking Max",
+            "value": "max"
+          }
+        ],
+        "type": "select"
+      },
+      {
+        "category": "mode",
+        "currentValue": "default",
+        "id": "mode",
+        "name": "Mode",
+        "options": [
+          {
+            "description": "Manual approvals; tools execute normally.",
+            "name": "Default",
+            "value": "default"
+          },
+          {
+            "description": "Read-only planning; no tool execution.",
+            "name": "Plan",
+            "value": "plan"
+          },
+          {
+            "description": "Auto-approve safe operations.",
+            "name": "Auto",
+            "value": "auto"
+          },
+          {
+            "description": "Auto-approve everything.",
+            "name": "YOLO",
+            "value": "yolo"
+          }
+        ],
+        "type": "select"
+      }
+    ],
+    "frame": "response",
+    "id": 2,
+    "modes": {
+      "advertised": true,
+      "current": "default",
+      "ids": [
+        "default",
+        "plan",
+        "auto",
+        "yolo"
+      ]
+    }
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "is_shell": true,
+        "kind": "tool_call",
+        "title": "Bash",
+        "tool_call_id": "0:tool-1",
+        "tool_kind": "execute",
+        "wire_title": "Bash"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "0:tool-1",
+        "tool_output": "{\"command\":\"",
+        "tool_output_bytes": 12,
+        "tool_output_digest": "987afbaaefb04d33526ed3164d16878c3e8a0b060709b754e32dfd79f94bdb6c",
+        "tool_status": "in_progress"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "0:tool-1",
+        "tool_output": "{\"command\":\"echo",
+        "tool_output_bytes": 16,
+        "tool_output_digest": "c01934fa12c275f902a8e5dc346d711c80597029ef6d51e909bea63305eaeca7",
+        "tool_status": "in_progress"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "0:tool-1",
+        "tool_output": "{\"command\":\"echo l",
+        "tool_output_bytes": 18,
+        "tool_output_digest": "50f69d0a63d60428c9b3fa189c76e7368f69b45dd814f82c02e1c01502602d90",
+        "tool_status": "in_progress"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "0:tool-1",
+        "tool_output": "{\"command\":\"echo l >",
+        "tool_output_bytes": 20,
+        "tool_output_digest": "9cdff8171ac29fd348f2a83ed229d3c80ee11ccd93bc4be78ef27f627d27daa6",
+        "tool_status": "in_progress"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "0:tool-1",
+        "tool_output": "{\"command\":\"echo l > l",
+        "tool_output_bytes": 22,
+        "tool_output_digest": "0bd937e89115adfa46b8999995d5c8db26e6d1867fe10da3fcb734e67040ed39",
+        "tool_status": "in_progress"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "0:tool-1",
+        "tool_output": "{\"command\":\"echo l > l7",
+        "tool_output_bytes": 23,
+        "tool_output_digest": "a6b0a5721242d14686b8898830ccf7021f5f6c18ac27211a2a4eacea3bf3f6c3",
+        "tool_status": "in_progress"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "0:tool-1",
+        "tool_output": "{\"command\":\"echo l > l7.txt",
+        "tool_output_bytes": 27,
+        "tool_output_digest": "62958780d815494d52880310838cd211b9f0670f268e5fff3e7b1a3a45210345",
+        "tool_status": "in_progress"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "0:tool-1",
+        "tool_output": "{\"command\":\"echo l > l7.txt\"",
+        "tool_output_bytes": 28,
+        "tool_output_digest": "39bf1510b2336ff7fe6735cb36c353c50f6bbca9d156ef615bdb9b470f01bcbd",
+        "tool_status": "in_progress"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "0:tool-1",
+        "tool_output": "{\"command\":\"echo l > l7.txt\"}",
+        "tool_output_bytes": 29,
+        "tool_output_digest": "27771cb1a204304832592a9073fceb2888592000d5f556ca416da8e22b5dbcdb",
+        "tool_status": "in_progress"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "0:tool-1",
+        "tool_output": "{\"command\":\"echo l > l7.txt\"}",
+        "tool_output_bytes": 29,
+        "tool_output_digest": "27771cb1a204304832592a9073fceb2888592000d5f556ca416da8e22b5dbcdb",
+        "tool_status": "in_progress"
+      },
+      {
+        "is_shell": true,
+        "kind": "tool_call_update",
+        "raw_tool_params": {
+          "command": "echo l > l7.txt"
+        },
+        "title": "echo l > l7.txt",
+        "tool_call_id": "0:tool-1",
+        "tool_input": "{\n  \"command\": \"echo l > l7.txt\"\n}",
+        "tool_kind": "execute",
+        "wire_title": "Running: echo l > l7.txt"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "action": "update",
+    "events": [
+      {
+        "kind": "tool_result",
+        "tool_call_id": "0:tool-1",
+        "tool_final": true,
+        "tool_output": "Command executed successfully.",
+        "tool_output_bytes": 30,
+        "tool_output_digest": "3988564dff1cdd1cd387a48c0a0932a6ede55f52a5bdad2c622b9b2ca99a3e2a",
+        "tool_status": "completed"
+      }
+    ],
+    "frame": "session/update",
+    "session_update": "tool_call_update"
+  },
+  {
+    "frame": "response",
+    "id": 3,
+    "stop_reason": "end_turn"
+  },
+  {
+    "action": "update",
+    "events": [],
+    "frame": "session/update",
+    "session_update": "current_mode_update"
+  },
+  {
+    "action": "update",
+    "events": [],
+    "frame": "session/update",
+    "session_update": "config_option_update"
+  }
+]
