@@ -966,11 +966,12 @@ AGENT_AUTH_DECLARATIONS: Tuple[AgentAuthDeclaration, ...] = (
     AgentAuthDeclaration(
         backend=ACP_BACKEND_KIMI,
         # Kimi Code CLI keeps everything under one home (``~/.kimi-code``,
-        # relocated whole by ``KIMI_CODE_HOME``). Four leaves are fenced from the
+        # relocated whole by ``KIMI_CODE_HOME``). Seven leaves are fenced from the
         # agent's file tools: ``credentials`` (OAuth tokens, 0600 files in a 0700
         # directory), ``config.toml`` (an API key may sit under ``[providers.*]``),
         # ``logs`` and ``sessions`` (each session's ``agents/*/wire.jsonl`` records
-        # request parameters and tool schemas). The floor names directories, not
+        # request parameters and tool schemas), plus ``oauth`` (sign-in state),
+        # ``device_id`` and ``user-history`` (prompt history), seen in a real home. The floor names directories, not
         # globs, so ``sessions`` is fenced whole rather than as ``wire.jsonl`` alone.
         # TODO(capture): which of these the sandboxed child must still WRITE (logs,
         # sessions) is unmeasured; every one is spared below until a capture says
@@ -981,20 +982,34 @@ AGENT_AUTH_DECLARATIONS: Tuple[AgentAuthDeclaration, ...] = (
             ".kimi-code/config.toml",
             ".kimi-code/logs",
             ".kimi-code/sessions",
+            ".kimi-code/oauth",
+            ".kimi-code/device_id",
+            ".kimi-code/user-history",
         ),
         # ``KIMI_CODE_HOME`` replaces the whole ``.kimi-code`` directory, so each leaf
         # keeps its segments below it (the default spelling would keep only the last,
         # which is the same here, but spelled out so a reader need not check).
         home_override_env_vars=("KIMI_CODE_HOME",),
-        override_relative_leaves=("credentials", "config.toml", "logs", "sessions"),
+        override_relative_leaves=(
+            "credentials",
+            "config.toml",
+            "logs",
+            "sessions",
+            "oauth",
+            "device_id",
+            "user-history",
+        ),
         # The harness authenticates ITSELF from ``credentials`` and may read its key
         # from ``config.toml``; it writes ``logs`` and ``sessions`` as it runs. The
-        # read gate still refuses all four to the agent's file tools.
+        # read gate still refuses all seven to the agent's file tools.
         adapter_own_leaves=(
             ".kimi-code/credentials",
             ".kimi-code/config.toml",
             ".kimi-code/logs",
             ".kimi-code/sessions",
+            ".kimi-code/oauth",
+            ".kimi-code/device_id",
+            ".kimi-code/user-history",
         ),
         sign_in_remedy=(
             "Kimi Code CLI signs in on its own. In a terminal on the gateway host, run "

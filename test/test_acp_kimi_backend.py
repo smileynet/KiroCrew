@@ -393,6 +393,9 @@ def test_the_auth_declaration() -> None:
         ".kimi-code/config.toml",
         ".kimi-code/logs",
         ".kimi-code/sessions",
+        ".kimi-code/oauth",
+        ".kimi-code/device_id",
+        ".kimi-code/user-history",
     )
     assert declaration.home_override_env_vars == ("KIMI_CODE_HOME",)
     # The subset rule is enforced in the constructor; the leaves a host logout could
@@ -413,6 +416,9 @@ def test_the_auth_declaration() -> None:
         "config.toml",
         "logs/kimi.log",
         "sessions/key/session_1/agents/main/wire.jsonl",
+        "oauth/kimi-code",
+        "device_id",
+        "user-history/prompts.jsonl",
     ],
 )
 def test_the_agents_file_tools_cannot_read_a_kimi_leaf(leaf: str, tmp_path, monkeypatch) -> None:
@@ -463,6 +469,37 @@ def test_the_walk_finds_a_parents_directory_and_stops_at_the_git_root(tmp_path) 
     assert kimi_mod.kimi_repo_config_issue(work) == ""
     (root / ".kimi-code").write_text("")  # a file counts as present
     assert str(root / ".kimi-code") in kimi_mod.kimi_repo_config_issue(work)
+
+
+def _fake_home(tmp_path, monkeypatch):
+    home = tmp_path / "home"
+    work = home / "work" / "notes"
+    work.mkdir(parents=True)
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.delenv("KIMI_CODE_HOME", raising=False)
+    return home, work
+
+
+def test_kimis_own_user_home_is_not_a_project_config(tmp_path, monkeypatch) -> None:
+    home, work = _fake_home(tmp_path, monkeypatch)
+    (home / ".kimi-code").mkdir()
+    assert kimi_mod.kimi_repo_config_issue(work) == ""
+
+
+def test_a_relocated_kimi_home_is_not_a_project_config_either(tmp_path, monkeypatch) -> None:
+    home, work = _fake_home(tmp_path, monkeypatch)
+    (home / ".kimi-code").mkdir()
+    elsewhere = home / "work" / ".kimi-code"
+    elsewhere.mkdir()
+    monkeypatch.setenv("KIMI_CODE_HOME", str(elsewhere))
+    assert kimi_mod.kimi_repo_config_issue(work) == ""
+
+
+def test_a_project_config_below_home_is_still_refused(tmp_path, monkeypatch) -> None:
+    home, work = _fake_home(tmp_path, monkeypatch)
+    (home / ".kimi-code").mkdir()
+    (home / "work" / ".kimi-code").mkdir()
+    assert str(home / "work" / ".kimi-code") in kimi_mod.kimi_repo_config_issue(work)
 
 
 @pytest.mark.asyncio

@@ -3,7 +3,7 @@
 Kimi Code CLI serves ACP from its own binary (``kimi acp``), so its executable comes
 off the shared self-served ladder (``ACP_BACKEND_LAUNCH``) and there is no adapter
 package. DORMANT: the id can be spelled and launched, but it is not selectable
-(``NOT_SHIPPED_SELECTABLE``; the Kimi worked example in harness-onboarding.md lists
+(it is in the ``NOT_SHIPPED_SELECTABLE`` set of ``test/test_agent_backend_editable.py``, not in ``BASELINE_SELECTABLE_BACKENDS``; the Kimi worked example in harness-onboarding.md lists
 each decision still waiting on a live capture). Four things are its own:
 
 * **Its permission route is a session config option**, ``mode``, which Crew writes
@@ -95,7 +95,7 @@ def kimi_repo_config_issue(work_dir: object) -> str:
     A project ``.kimi-code`` can hold a local config, ``mcp.json``, ``[[hooks]]`` and
     ``[[permission.rules]]`` allow rules; any of them could run or pre-approve a tool
     without Kiro Crew's approval. Refused on presence, in the working directory and
-    every parent up to its git root, along the path as given AND as resolved, with
+    every parent up to its git root or the user's home (never ``~/.kimi-code`` or ``KIMI_CODE_HOME``, which are Kimi's own home), along the path as given AND as resolved, with
     Copilot's walk. A link or an unreadable entry counts as present (``lexists``).
     TODO(capture): whether Kimi's workspace-trust prompt, which a headless ACP session
     cannot answer, already stops these files; until measured, refuse.
@@ -104,11 +104,19 @@ def kimi_repo_config_issue(work_dir: object) -> str:
         return ""
     given = os.path.abspath(str(work_dir))
     seen: set[str] = set()
+    home = os.path.realpath(os.path.expanduser("~"))
+    user_homes = {os.path.join(home, KIMI_PROJECT_DIR)}
+    if override := os.environ.get("KIMI_CODE_HOME"):
+        user_homes.add(os.path.realpath(os.path.expanduser(override)))
     for directory in [*_project_ancestors(given), *_project_ancestors(os.path.realpath(given))]:
         if directory in seen:
             continue
         seen.add(directory)
+        if os.path.realpath(directory) == home:
+            break
         found = os.path.join(directory, KIMI_PROJECT_DIR)
+        if os.path.realpath(found) in user_homes:
+            continue
         if os.path.lexists(found):
             return (
                 f"This project carries Kimi Code CLI's own configuration ({found}). "
