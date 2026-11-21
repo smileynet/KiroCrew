@@ -26,6 +26,9 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import re
+import shutil
+import subprocess
 from pathlib import Path
 
 from kiro_crew import acp_tool_gate
@@ -37,11 +40,15 @@ from kiro_crew.agent_sdk.backends import ACP_BACKEND_KIMI
 
 __all__ = [
     "KIMI_AGENT_NAME",
+    "KIMI_MIN_NODE",
     "KIMI_NPM_PACKAGE",
     "KIMI_PROJECT_DIR",
     "KimiLaunch",
     "kimi_installed_version",
+    "kimi_node_found",
+    "kimi_node_message",
     "kimi_repo_config_issue",
+    "kimi_signed_out",
 ]
 
 #: ``agentInfo.name`` Kimi Code CLI reports on ``initialize`` (observed on 2.7.2).
@@ -54,6 +61,11 @@ KIMI_NPM_PACKAGE = "@moonshot-ai/kimi-code"
 
 #: The project directory Kimi Code reads local configuration from.
 KIMI_PROJECT_DIR = ".kimi-code"
+
+#: The oldest Node.js an npm-installed Kimi Code CLI 2.7.2 runs on (its manifest says
+#: ``engines.node >=22.19.0``; on Node 20 the binary dies at import with a
+#: ``SyntaxError`` about ``node:zlib`` before it can answer ``initialize``).
+KIMI_MIN_NODE = (22, 19, 0)
 
 #: How many directories above the resolved binary a manifest is looked for in. The
 #: npm bin link resolves to ``<package>/dist/main.mjs``, so two levels reach the
@@ -87,6 +99,62 @@ def kimi_installed_version(kimi_bin: str) -> str:
             version = data.get("version")
             return version.strip() if isinstance(version, str) else ""
     return ""
+
+
+def kimi_node_found(kimi_bin: str) -> str:
+    """The ``node`` version that is too old for *kimi_bin*, ``"none"`` when there is no
+    ``node`` on PATH, or ``""`` when it is fine or cannot be judged. Blocking.
+
+    Only an npm install (one with the package manifest) runs on the PATH's ``node``; a
+    standalone build or the archived Python kimi-cli answers ``""``. An unreadable
+    version is not a wrong one, so it also answers ``""``.
+    """
+    if not kimi_installed_version(kimi_bin):
+        return ""
+    node = shutil.which("node")
+    if not node:
+        return "none"
+    try:
+        out = subprocess.run(  # noqa: S603 -- the node on PATH, fixed argument
+            [node, "--version"], capture_output=True, text=True, timeout=5, check=False
+        ).stdout.strip()
+    except (OSError, subprocess.SubprocessError):
+        return ""
+    match = re.fullmatch(r"v(\d+)\.(\d+)\.(\d+)\S*", out)
+    if not match or tuple(int(part) for part in match.groups()) >= KIMI_MIN_NODE:
+        return ""
+    return out
+
+
+def kimi_node_message(found: str) -> str:
+    """The remedy for a Node.js too old (or missing) for Kimi Code CLI."""
+    needed = ".".join(str(part) for part in KIMI_MIN_NODE)
+    have = "no node on PATH" if found == "none" else f"node {found} on PATH"
+    return (
+        f"Kimi Code CLI needs Node.js {needed} or newer, and this host has {have}. "
+        f"On Node 20 it crashes at start. Install Node.js {needed} or newer, put it "
+        "first on the gateway's PATH, restart Kiro Crew, then start a new chat."
+    )
+
+
+def kimi_signed_out(config_options: object) -> bool:
+    """True when ``session/new``'s ``thinking`` select offers only ``on``.
+
+    Observed on 2.7.2: signed out, Kimi answers ``session/prompt`` with nothing at all
+    (no error, no -32000), so there is no error text to match. The same ``session/new``
+    advertises a ``thinking`` select with the single value ``on``; signed in it offers
+    ``low``, ``high`` and ``max``. The check reads that on the handshake, before any
+    prompt, so a signed-out session ends with the sign-in remedy rather than a hang.
+    shortcut: this is Kimi's own UI state read as a sign-in fact; if a release stops
+    narrowing the list, the check goes quiet (a signed-out prompt then hangs, as before).
+    """
+    if not isinstance(config_options, list):
+        return False
+    for option in config_options:
+        if isinstance(option, dict) and option.get("id") == "thinking":
+            values = [o.get("value") for o in option.get("options", []) if isinstance(o, dict)]
+            return values == ["on"]
+    return False
 
 
 def kimi_repo_config_issue(work_dir: object) -> str:
@@ -150,11 +218,18 @@ class KimiLaunch(ProcessAdapter):
         if repo_issue:
             raise AcpToolGateUnroutable(repo_issue, transient=False, user_worded=True)
         (
-            _bin,
+            kimi_bin,
             argv,
             spawn_label,
             stderr_label,
         ) = await launch_mod.resolve_self_served_launch(self.backend)
+        # Kimi 2.7.2 dies at import on Node 20, before ``initialize``: name that, not a
+        # generic crash.
+        node_found = await asyncio.to_thread(kimi_node_found, kimi_bin)
+        if node_found:
+            raise AcpToolGateUnroutable(
+                kimi_node_message(node_found), transient=False, user_worded=True
+            )
         # The refuse-then-mask preflight every enforced host runs. ACP cannot make a
         # harness ask about a passive read, so the OS credential mask is the
         # compensating control, as for Codex and Copilot.
@@ -166,8 +241,11 @@ class KimiLaunch(ProcessAdapter):
         # (``AcpClient._tripwire_pi_gate``): a call that completes with no permission
         # request ends the session unless the harness's ``HARNESS_UNASKED_TOOL_IDS``
         # row names it. Kimi has no row yet, so every unasked completion trips.
-        # TODO(capture): the docs say read-only calls run unasked in ``default``; add
-        # the row (and ``ACP_BACKENDS_UNASKED_NATIVE_TOOLS`` membership) from a capture.
+        # Captured on 2.7.2: in ``default`` a Write inside the cwd ran with NO permission
+        # request (``test/fixtures/acp_frames/kimi/turn-live-write-unasked``), so the
+        # tripwire ends a session that edits a file. No exemption is added: whether to
+        # accept that, force asking with a Crew-owned config, or treat it as Codex's
+        # residual is a decision for the owner (reports/kimi-harness-capture-round.md).
         session._unasked_shell_tripwire = True
         return SpawnPlan(
             argv=argv,

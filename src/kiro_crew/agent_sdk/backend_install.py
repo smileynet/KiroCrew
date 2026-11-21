@@ -398,6 +398,16 @@ def _probe_self_served(backend: str) -> BackendInstallState:
                 acp_driver.self_served_install_command(backend),
                 found_version=found,
             )
+        old_node = acp_driver.self_served_old_node(backend)
+        if old_node:
+            # Kimi 2.7.2 needs Node >= 22.19 and dies at import on Node 20.
+            return BackendInstallState(
+                backend,
+                policy_id,
+                MISSING,
+                ("node 22.19",),
+                found_version=old_node,
+            )
         return BackendInstallState(
             backend,
             policy_id,

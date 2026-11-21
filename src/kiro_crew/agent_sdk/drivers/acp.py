@@ -1284,6 +1284,19 @@ def self_served_install_command(backend: str) -> str:
     return launch_for(backend).install_command
 
 
+def self_served_old_node(backend: str) -> str:
+    """The ``node`` version too old for a Kimi Code CLI install (``"none"`` when absent), else ``""``."""
+    from kiro_crew.agent_sdk.backends import ACP_BACKEND_KIMI
+
+    if backend == ACP_BACKEND_KIMI:
+        from kiro_crew.acp.client import _resolve_self_served_bin
+        from kiro_crew.acp.harness.kimi import kimi_node_found
+
+        binary, _searched_path = _resolve_self_served_bin(backend)
+        return kimi_node_found(binary) if binary else ""
+    return ""
+
+
 def self_served_wrong_version(backend: str) -> str:
     """The release *backend*'s binary would run, when it is not the one Crew verified.
 

@@ -25,5 +25,6 @@ class KimiAcpClient(AcpClient, serves=ACP_BACKEND_KIMI):
     # The facade is the class's import path, so pickles and reprs keep naming it.
     __module__ = "kiro_crew.acp.client"
 
-    # The ``AcpClient`` hook this class fills, bound from the Kimi Code owner.
+    # The ``AcpClient`` hooks this class fills, bound from the Kimi Code owner.
     _note_harness_adapter_version = _client_kimi_session._note_harness_adapter_version
+    _refuse_harness_default_model = _client_kimi_session._refuse_harness_default_model
