@@ -28,7 +28,7 @@ from kiro_crew.acp_backends import (
     permission_config_for,
     routing_for,
 )
-from kiro_crew.agent_sdk.tool_gate import PI_GATE_ARTIFACT_LEAF
+from kiro_crew.agent_sdk.tool_gate import ADAPTER_CREW_HOME_LEAVES, PI_GATE_ARTIFACT_LEAF
 from kiro_crew.sandbox import (
     _CREW_CHILD_WITHHELD_LEAVES,
     _CREW_READONLY_LEAVES,
@@ -518,11 +518,22 @@ def test_every_enforced_harness_declares_its_own_credential() -> None:
             continue
         declaration = host_auth.declaration_for(backend)
         from_vault = declaration.entitlement_source == host_auth.ENTITLEMENT_HOST_VAULT
-        assert backend in gate.ADAPTER_OWN_CREDENTIAL_LEAVES or from_vault, (
+        assert (
+            backend in gate.ADAPTER_OWN_CREDENTIAL_LEAVES
+            or backend in ADAPTER_CREW_HOME_LEAVES
+            or from_vault
+        ), (
             f"{backend!r} is enforced, so the mask denies it the whole floor; it "
-            "must name its own credential leaf or declare ENTITLEMENT_HOST_VAULT, "
+            "must name its own credential leaf, run out of a Crew-owned home "
+            "(ADAPTER_CREW_HOME_LEAVES), or declare ENTITLEMENT_HOST_VAULT, "
             "or it cannot authenticate"
         )
+        if backend in ADAPTER_CREW_HOME_LEAVES:
+            assert not declaration.adapter_own_leaves, (
+                f"{backend!r} runs out of a Crew-owned home AND carves "
+                f"{declaration.adapter_own_leaves!r} out of the child mask; the person's "
+                "own credential store would stay readable by a child that never uses it"
+            )
         if from_vault:
             assert not declaration.adapter_own_leaves, (
                 f"{backend!r} is fed its key from Crew's vault AND carves "
@@ -1119,8 +1130,11 @@ def _granted_per_backend(leaf: str, backend: str) -> bool:
     """Whether a WITHHELD leaf is handed to *backend* alone by a narrower grant.
 
     Keyed on the ``VERIFIED_GATE_EXTENSION`` routing, as the production rule is, not
-    on one id, so the test and the mask cannot drift apart.
+    on one id, so the test and the mask cannot drift apart; and on the Crew-owned home
+    a harness runs out of (``ADAPTER_CREW_HOME_LEAVES``).
     """
+    if ADAPTER_CREW_HOME_LEAVES.get(backend) == leaf:
+        return True
     return leaf == PI_GATE_ARTIFACT_LEAF and routing_for(backend) is Routing.VERIFIED_GATE_EXTENSION
 
 

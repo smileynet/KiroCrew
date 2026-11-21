@@ -66,6 +66,7 @@ from kiro_crew.agent_sdk.backends import (
     ACP_BACKEND_ANTIGRAVITY,
     ACP_BACKEND_CODEX,
     ACP_BACKEND_DEEPSEEK,
+    ACP_BACKEND_KIMI,
     ACP_BACKEND_LAUNCH,
     ACP_BACKEND_PI,
     ACP_BACKEND_STRANDS,
@@ -199,6 +200,19 @@ ADAPTER_OWN_CREDENTIAL_LEAVES: dict = {
 #: data-home spelling would be covered by the floor and missed here, and the pi
 #: harness would stop starting on exactly the layout nobody tests.
 PI_GATE_ARTIFACT_LEAF = "pi-gate"
+
+#: Crew-home leaf holding the Crew-owned Kimi Code homes (``acp.harness.kimi.prepare_kimi_home``):
+#: a copy of the person's Kimi sign-in, Kimi's own state and a ``config.toml`` Crew wrote. Kimi's
+#: child must READ AND WRITE it (it refreshes its token and keeps its sessions there), so it is
+#: excluded from the Kimi child's credential mask below; the read gate floor still fences the
+#: AGENT's file tools from it (``security.paths_lists``), so the two controls cover different
+#: readers. Spelled crew-home-relative like :data:`PI_GATE_ARTIFACT_LEAF`.
+KIMI_HOME_LEAF = "kimi-home"
+
+#: Per backend, the crew-home leaf its child runs out of INSTEAD OF a credential store of the
+#: person's own: a harness here names no ``adapter_own_leaves`` (the person's home stays masked
+#: from its child) and the leaf is excluded from that child's mask alone.
+ADAPTER_CREW_HOME_LEAVES: dict = {ACP_BACKEND_KIMI: KIMI_HOME_LEAF}
 
 #: The one owner allowed to answer DeepSeek Harness approval requests. Cordis
 #: reflection-wraps callbacks, so the gate plugin records the loader entry and
@@ -393,8 +407,17 @@ def adapter_hidden_credential_dirs(backend: str) -> tuple:
         if routing_for(backend) is Routing.VERIFIED_GATE_EXTENSION
         else set()
     )
+    # The crew-home leaf the child runs out of (Kimi's ``KIMI_CODE_HOME``), for that child
+    # alone: the mask that hides the floor from other children would stop it from starting.
+    own_home_leaf = ADAPTER_CREW_HOME_LEAVES.get(backend)
+    own_home = {f"{prefix}/{own_home_leaf}" for prefix in prefixes} if own_home_leaf else set()
     excluded_leaves = tuple(
-        sorted(set(ADAPTER_OWN_CREDENTIAL_LEAVES.get(backend, ())) | host_runtime | gate_artifacts)
+        sorted(
+            set(ADAPTER_OWN_CREDENTIAL_LEAVES.get(backend, ()))
+            | host_runtime
+            | gate_artifacts
+            | own_home
+        )
     )
     return sandbox_credential_targets(excluded_leaves)
 

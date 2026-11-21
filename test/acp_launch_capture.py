@@ -118,6 +118,9 @@ VOLATILE_ENV = {
     # That the codex child RECEIVES it -- its SQLite home is its own -- is the fact
     # being pinned; the directory is not.
     "CODEX_SQLITE_HOME": "<scratch>",
+    # Kimi runs out of a Crew-owned home under the data home, one per session. That the child
+    # RECEIVES it is the fact being pinned (``acp.harness.kimi``); the path is the host's.
+    "KIMI_CODE_HOME": "<kimi-home>",
 }
 
 #: The parent environment every capture runs against, whatever the recording host's
@@ -550,6 +553,11 @@ def _default_home_pins(tmp_path: Path) -> list:
     Enter these before the env patch so they exit after it: a stray thread from an
     earlier test reads the home at call time.
     """
+    # Kimi's spawn refuses a Crew home with no sign-in of its own (``prepare_kimi_home``);
+    # the capture stands in the file ``KIMI_CODE_HOME=<home> kimi login`` leaves.
+    credentials = tmp_path / "default-home" / "kimi-home" / "credentials"
+    credentials.mkdir(parents=True, exist_ok=True)
+    (credentials / "kimi-code.json").write_text("{}")
     return [
         patch.object(config_paths, "_resolve_default_home", lambda: tmp_path / "default-home"),
         patch.object(config_paths, "_write_recovery_breadcrumb", lambda _home: None),

@@ -973,10 +973,9 @@ AGENT_AUTH_DECLARATIONS: Tuple[AgentAuthDeclaration, ...] = (
         # request parameters and tool schemas), plus ``oauth`` (sign-in state),
         # ``device_id`` and ``user-history`` (prompt history), seen in a real home. The floor names directories, not
         # globs, so ``sessions`` is fenced whole rather than as ``wire.jsonl`` alone.
-        # TODO(capture): which of these the sandboxed child must still WRITE (logs,
-        # sessions) is unmeasured; every one is spared below until a capture says
-        # otherwise, because a masked directory the child cannot create fails every
-        # session at start.
+        # These are the PERSON's own home. Kimi's child runs out of Crew's home instead
+        # (see ``adapter_own_leaves`` below), so what it must write (logs, sessions) is
+        # written there.
         credential_leaves=(
             ".kimi-code/credentials",
             ".kimi-code/config.toml",
@@ -999,32 +998,35 @@ AGENT_AUTH_DECLARATIONS: Tuple[AgentAuthDeclaration, ...] = (
             "device_id",
             "user-history",
         ),
-        # The harness authenticates ITSELF from ``credentials`` and may read its key
-        # from ``config.toml``; it writes ``logs`` and ``sessions`` as it runs. The
-        # read gate still refuses all seven to the agent's file tools.
-        adapter_own_leaves=(
-            ".kimi-code/credentials",
-            ".kimi-code/config.toml",
-            ".kimi-code/logs",
-            ".kimi-code/sessions",
-            ".kimi-code/oauth",
-            ".kimi-code/device_id",
-            ".kimi-code/user-history",
-        ),
+        # NONE spared from the child's mask. Kiro Crew starts Kimi with its own
+        # ``KIMI_CODE_HOME`` (``<crew data>/kimi-home``, ``acp.harness.kimi``), which holds a
+        # sign-in OF ITS OWN made with ``KIMI_CODE_HOME=<that home> kimi login``. Nothing is
+        # copied or linked from the person's home: Kimi rotates its refresh credential on each
+        # refresh, so two homes holding one sign each other out (observed). The child never
+        # opens the person's home, so the seven leaves above stay hidden from it. Crew's home
+        # is the one place the child may read AND write (``tool_gate.ADAPTER_CREW_HOME_LEAVES``)
+        # and the agent's file tools may not open (``security.paths_lists``, ``kimi-home``).
+        adapter_own_leaves=(),
         sign_in_remedy=(
-            "Kimi Code CLI signs in on its own. In a terminal on the gateway host, run "
-            "kimi login (device-code sign-in) or /login inside kimi, then start a new "
-            f"chat. {HOST_TERMINAL_NOTE} Kiro Crew verifies Kimi Code CLI 2.7.2 only and "
-            "refuses other versions, and refuses the archived Python kimi-cli."
+            "Kimi Code CLI signs in on its own, and Kiro Crew runs it out of its own home "
+            "with a sign-in of its own (your own kimi login is not used). In a terminal on "
+            "the gateway host, run KIMI_CODE_HOME=<Kiro Crew data folder>/kimi-home kimi "
+            "login (by default KIMI_CODE_HOME=~/.kiro/crew/kimi-home kimi login), complete "
+            f"the device-code sign-in, then start a new chat. {HOST_TERMINAL_NOTE} Kiro Crew "
+            "verifies Kimi Code CLI 2.7.2 only and refuses other versions, and refuses the "
+            "archived Python kimi-cli."
         ),
         signed_out_message=(
-            "Kimi Code CLI is not signed in. In a terminal on the gateway host, run "
-            "`kimi login`, complete the device-code sign-in, then start a new chat. "
-            f"{HOST_TERMINAL_NOTE}"
+            "Kimi Code CLI is not signed in for Kiro Crew. In a terminal on the gateway host, "
+            "run `KIMI_CODE_HOME=<Kiro Crew data folder>/kimi-home kimi login` (by default "
+            "`KIMI_CODE_HOME=~/.kiro/crew/kimi-home kimi login`), complete the device-code "
+            f"sign-in, then start a new chat. {HOST_TERMINAL_NOTE}"
         ),
         # Empty: signed out, 2.7.2 answers ``session/prompt`` with nothing (no -32000,
         # no error text), so there is no phrase to copy. The client reads the sign-in
-        # from the handshake instead (``harness.kimi.kimi_signed_out``).
+        # from the handshake instead (``harness.kimi.kimi_signed_out``), and the spawn
+        # refuses a home with no credential file (``harness.kimi.prepare_kimi_home``); both
+        # name the exact command for this install's home.
         signed_out_signature="",
         host_logout_retires_children=False,
         entitlement_source=ENTITLEMENT_OWN_CREDENTIAL_FILE,

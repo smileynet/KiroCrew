@@ -19,10 +19,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from kiro_crew.acp.harness.kimi import KIMI_AGENT_NAME, kimi_signed_out
+from kiro_crew.acp.harness.kimi import (
+    KIMI_AGENT_NAME,
+    kimi_signed_out,
+    kimi_signed_out_message,
+)
 from kiro_crew.acp.no_model_provider import AcpNoModelProvider
 from kiro_crew.acp.transport_errors import AcpToolGateUnroutable
-from kiro_crew.agent_sdk import host_auth
 from kiro_crew.agent_sdk.backends import ACP_BACKEND_KIMI, ACP_BACKEND_LAUNCH, KIMI_VERIFIED_VERSION
 
 if TYPE_CHECKING:
@@ -67,4 +70,5 @@ def _refuse_harness_default_model(self: KimiAcpClient) -> None:
     a respawn reads the same missing sign-in.
     """
     if kimi_signed_out(self._acp_config_options):
-        raise AcpNoModelProvider(host_auth.signed_out_message(ACP_BACKEND_KIMI))
+        # The exact command for Crew's own home, which the static declaration cannot spell.
+        raise AcpNoModelProvider(kimi_signed_out_message())

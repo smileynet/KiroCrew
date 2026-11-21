@@ -783,6 +783,11 @@ _CREW_SECRET_LEAVES: list[str] = [
     # the launcher and read the sealed extension. This floor still keeps the agent's
     # own file tools out; the controls cover different readers rather than cancelling.
     "pi-gate",
+    # Crew-owned Kimi Code homes: a copy of the person's Kimi sign-in (OAuth tokens), Kimi's
+    # session records and the config Crew wrote. Kimi's own child reads and writes it (it is
+    # excluded from that child's mask, ``tool_gate.KIMI_HOME_LEAF``); the agent's file tools
+    # may not open it, so the agent can neither take the token nor edit its own rules.
+    "kimi-home",
     # KAS MCP launch snapshots hold servers' env values (``acp.kas_env_launch``); the
     # ``pi-gate`` split: readable in the sandbox for the launcher, fenced from file tools.
     "kas-mcp-launch",

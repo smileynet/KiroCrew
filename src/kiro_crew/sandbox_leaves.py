@@ -910,6 +910,12 @@ _CREW_SANDBOX_VISIBLE_LEAVES: tuple[str, ...] = (
     # ``mcp_cron`` builds a ``CronService(base_dir=config_dir())`` in-sandbox and both
     # reads and rewrites the job store through it.
     "crons.json",
+    # The Crew-owned Kimi Code homes (``acp.harness.kimi.prepare_kimi_home``). Kimi's child
+    # runs out of one (``KIMI_CODE_HOME``): it refreshes its token and writes its session
+    # records there, so a read-only or hidden leaf would fail every Kimi session at start.
+    # Withheld from every other harness's child (``_CREW_CHILD_WITHHELD_LEAVES``) and fenced
+    # from the agent's own file tools by the read gate (``security.paths_lists``).
+    "kimi-home",
 )
 
 
@@ -1083,6 +1089,10 @@ _CREW_CHILD_WITHHELD_LEAVES: tuple[str, ...] = (
     # KAS MCP launch snapshots hold MCP servers' env values, and only a KAS child
     # (not an enforced harness's) starts the launcher that reads them.
     "kas-mcp-launch",
+    # Crew-owned Kimi Code homes. They hold a COPY of the person's Kimi sign-in, so they are
+    # withheld from every other harness's child; Kimi's own child gets its home back per
+    # backend in ``tool_gate.adapter_hidden_credential_dirs`` (``ADAPTER_CREW_HOME_LEAVES``).
+    "kimi-home",
 )
 
 #: Leaves an ENFORCED harness's child MAY read. The other half of the pair above.
