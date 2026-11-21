@@ -104,7 +104,7 @@ default_permission_mode = "yolo"
 
 [providers."managed:kimi-code"]
 type = "kimi"
-base_url = "https://api.example.invalid/coding/v1"
+base_url = "https://api.kimi.com/coding/v1"
 api_key = ""
 
 [providers."managed:kimi-code".oauth]
@@ -204,7 +204,7 @@ def test_a_home_with_no_sign_in_is_refused_with_the_one_login_command(
     with pytest.raises(AcpToolGateUnroutable) as raised:
         kimi_mod.prepare_kimi_home()
     assert raised.value.transient is False and raised.value.user_worded is True
-    assert f"KIMI_CODE_HOME={home} kimi login" in str(raised.value)
+    assert f"KIMI_CODE_HOME={home} kimi login --region global" in str(raised.value)
     # The home exists, private and empty, ready for that login; no config was written yet.
     assert home.is_dir() and (home.stat().st_mode & 0o777) == 0o700
     assert list(home.iterdir()) == []
@@ -213,8 +213,47 @@ def test_a_home_with_no_sign_in_is_refused_with_the_one_login_command(
 def test_the_login_command_quotes_the_home() -> None:
     assert (
         kimi_mod.kimi_login_command("/a b/kimi-home")
-        == "KIMI_CODE_HOME='/a b/kimi-home' kimi login"
+        == "KIMI_CODE_HOME='/a b/kimi-home' kimi login --region global"
     )
+
+
+_WIN_HOME = r"C:\Users\a b\.kiro\crew\kimi-home"
+
+
+def test_the_login_command_is_spelled_per_shell() -> None:
+    assert kimi_mod.kimi_login_command(_WIN_HOME, "powershell") == (
+        r"$env:KIMI_CODE_HOME='C:\Users\a b\.kiro\crew\kimi-home'; kimi login --region global"
+    )
+    assert kimi_mod.kimi_login_command("C:\\it's", "powershell").startswith(
+        "$env:KIMI_CODE_HOME='C:\\it''s'; "
+    )
+    assert kimi_mod.kimi_login_command(_WIN_HOME, "cmd") == (
+        r'set "KIMI_CODE_HOME=C:\Users\a b\.kiro\crew\kimi-home" && kimi login --region global'
+    )
+
+
+def test_the_signed_out_message_names_the_windows_shells_on_windows(monkeypatch) -> None:
+    monkeypatch.setattr(kimi_mod.os, "name", "nt")
+    message = kimi_mod.kimi_signed_out_message(_WIN_HOME)
+    assert "$env:KIMI_CODE_HOME=" in message and 'set "KIMI_CODE_HOME=' in message
+    assert message.count("--region global") == 2
+
+
+@pytest.mark.parametrize("home", [_WIN_HOME, "C:/Users/uosmi/kimi-home", r"\\host\share\kimi-home"])
+def test_a_windows_home_is_spelled_with_forward_slashes_in_the_deny_pattern(home: str) -> None:
+    config = tomllib.loads(kimi_mod.render_kimi_config(home))
+    patterns = [r["pattern"] for r in config["permission"]["rules"] if r["decision"] == "deny"]
+    assert patterns and all("\\" not in p for p in patterns)
+    assert patterns[0] == "Write(" + home.replace("\\", "/") + "/**)"
+
+
+@pytest.mark.parametrize(
+    "home",
+    [r"C:\Users\a(b)\kimi-home", r"C:\Users\a*\kimi-home", "/home/a\\b/kimi-home", "/a[b]/h"],
+)
+def test_other_glob_characters_and_a_posix_backslash_are_still_refused(home: str) -> None:
+    with pytest.raises(AcpToolGateUnroutable):
+        kimi_mod.render_kimi_config(home)
 
 
 def test_a_linked_credential_is_not_a_sign_in(tmp_path: Path, monkeypatch) -> None:
@@ -264,8 +303,52 @@ def test_the_signed_out_remedy_names_crews_home_and_not_the_persons_login(
 ) -> None:
     home = _crew(tmp_path, monkeypatch)
     message = kimi_mod.kimi_signed_out_message()
-    assert f"KIMI_CODE_HOME={home} kimi login" in message
+    assert f"KIMI_CODE_HOME={home} kimi login --region global" in message
     assert "your own kimi login is not used" in message
+
+
+def test_a_provider_pointing_at_another_host_is_refused() -> None:
+    kept = tomllib.loads(_LOGIN_CONFIG)
+    kept["providers"]["managed:kimi-code"]["base_url"] = "https://evil.example/v1"
+    with pytest.raises(AcpToolGateUnroutable) as raised:
+        kimi_mod.render_kimi_config("/crew/kimi-home", kept)
+    assert "evil.example" not in str(raised.value) and "base_url" in str(raised.value)
+    for bad in (
+        "http://api.kimi.com/v1",
+        "https://kimi.com.evil.example/v1",
+        "https://notkimi.com",
+    ):
+        kept["providers"]["managed:kimi-code"]["base_url"] = bad
+        with pytest.raises(AcpToolGateUnroutable):
+            kimi_mod.render_kimi_config("/crew/kimi-home", kept)
+    kept["providers"]["managed:kimi-code"]["base_url"] = "https://api.moonshot.cn/v1"
+    kept["providers"]["managed:kimi-code"]["oauth"]["oauth_host"] = "https://evil.example"
+    with pytest.raises(AcpToolGateUnroutable) as raised:
+        kimi_mod.render_kimi_config("/crew/kimi-home", kept)
+    assert "oauth.oauth_host" in str(raised.value)
+
+
+def test_unknown_provider_and_model_sub_keys_are_dropped() -> None:
+    kept = tomllib.loads(_LOGIN_CONFIG)
+    kept["providers"]["managed:kimi-code"]["command"] = "run-something"
+    kept["providers"]["managed:kimi-code"]["oauth"]["helper"] = "x"
+    kept["models"]["kimi-code/kimi-for-coding"]["on_start"] = "x"
+    kept["thinking"]["hook"] = "x"
+    config = tomllib.loads(kimi_mod.render_kimi_config("/crew/kimi-home", kept))
+    assert config["providers"] == tomllib.loads(_LOGIN_CONFIG)["providers"]
+    assert "on_start" not in config["models"]["kimi-code/kimi-for-coding"]
+    assert config["thinking"] == {"enabled": True}
+
+
+def test_the_config_is_written_through_a_unique_temp_file(tmp_path: Path, monkeypatch) -> None:
+    home = _crew(tmp_path, monkeypatch)
+    _sign_in(home)
+    kimi_mod.prepare_kimi_home()
+    assert sorted(p.name for p in home.iterdir()) == ["config.toml", "credentials"]
+    monkeypatch.setattr(kimi_mod.os, "replace", lambda *a: (_ for _ in ()).throw(OSError("x")))
+    with pytest.raises(OSError):
+        kimi_mod.prepare_kimi_home()
+    assert sorted(p.name for p in home.iterdir()) == ["config.toml", "credentials"]
 
 
 # ── 2. never a session approval ──────────────────────────────────────────────
@@ -582,6 +665,64 @@ async def test_an_edit_approval_names_its_path_in_the_diff_item(tmp_path: Path) 
 
 
 @pytest.mark.asyncio
+async def test_an_approval_whose_diff_and_text_paths_differ_pays_for_nothing(
+    tmp_path: Path,
+) -> None:
+    client = _client(tmp_path)
+    content = [
+        {"type": "diff", "path": str(tmp_path / "b.txt"), "oldText": "", "newText": "x"},
+        {
+            "type": "content",
+            "content": {"type": "text", "text": f"Requesting approval to Editing {tmp_path}/a.txt"},
+        },
+    ]
+    params = {"toolCall": {"title": "Edit", "content": content}}
+    assert kimi_fs.approved_write_paths(params, str(tmp_path)) == ()
+    await _approve(client, _permission("Edit", "", content=content))
+    for n, name in enumerate(("a.txt", "b.txt")):
+        await client._reject_unknown_server_request(
+            _message(
+                {
+                    "id": 20 + n,
+                    "method": "fs/write_text_file",
+                    "params": {"path": str(tmp_path / name), "content": "x"},
+                }
+            )
+        )
+        assert not (tmp_path / name).exists()
+
+
+@pytest.mark.asyncio
+async def test_the_approval_is_recorded_before_the_answer_and_undone_when_it_is_not_sent(
+    tmp_path: Path,
+) -> None:
+    client = _client(tmp_path)
+    target = tmp_path / "n2.txt"
+    gate = kimi_fs.kimi_fs_gate(client)
+    seen: list[dict] = []
+
+    async def _send(request_id, result, **_):
+        seen.append(dict(gate.approved))
+
+    client._send_response = _send
+    msg = _permission("Write", f"Requesting approval to Writing {target}")
+    await _approve(client, msg)
+    assert seen == [{str(target): 1}]
+
+    async def _fail(request_id, result, **_):
+        raise OSError("pipe closed")
+
+    client._send_response = _fail
+    msg = _permission("Write", f"Requesting approval to Writing {target}")
+    gate.new_turn()
+    client._build_permission_event(msg)
+    client._note_pi_gate_asked(msg)
+    with pytest.raises(OSError):
+        await client.approve_tool(msg.id)
+    assert gate.approved == {} and gate.pending == {msg.id: (str(target),)}
+
+
+@pytest.mark.asyncio
 async def test_only_write_and_edit_approvals_pay_for_a_write(tmp_path: Path) -> None:
     client = _client(tmp_path)
     await _approve(
@@ -855,7 +996,6 @@ async def test_a_load_of_a_yolo_session_reports_default_and_crew_still_writes_th
 
     client = _client(tmp_path)
     client._acp_config_options = load["result"]["configOptions"]
-    written: list[tuple[str, str]] = []
     after = [
         f["params"]["update"]
         for f in frames
@@ -863,14 +1003,29 @@ async def test_a_load_of_a_yolo_session_reports_default_and_crew_still_writes_th
         and f["params"]["update"].get("sessionUpdate") == "config_option_update"
     ]
 
-    async def _write(config_id: str, value: str) -> None:
-        written.append((config_id, value))
-        client._acp_config_options = after[-1]["configOptions"]
+    sent: list[tuple[str, dict]] = []
 
-    client.set_config_option = _write  # type: ignore[method-assign]
+    async def _send_request(method: str, params: dict) -> int:
+        sent.append((method, params))
+        return 99
+
+    async def _wait(request_id: int, timeout: float) -> dict:
+        assert request_id == 99
+        return {"configOptions": after[-1]["configOptions"]}
+
+    client._session_id = "sess"
+    client._send_request = _send_request  # type: ignore[method-assign]
+    client._wait_for_response = _wait  # type: ignore[method-assign]
     await client._apply_session_permission_routing()
-    # Written although the load already said ``default``, and the read-back finds no drift.
-    assert written == [("mode", "default")]
+    # Written although the load already said ``default``: the real ``set_config_option`` sent
+    # the request, stored the reply's options, and the read-back finds no drift.
+    assert sent == [
+        (
+            "session/set_config_option",
+            {"sessionId": "sess", "configId": "mode", "value": "default"},
+        )
+    ]
+    assert client._acp_config_options == after[-1]["configOptions"]
     assert session_config_drift_issue(KIMI, after[-1]) == ""
 
 

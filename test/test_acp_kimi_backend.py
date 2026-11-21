@@ -444,8 +444,11 @@ def test_the_auth_declaration() -> None:
     # own leaves is spared from its mask.
     assert declaration.adapter_own_leaves == ()
     assert declaration.host_logout_retires_children is False
-    for text in (declaration.sign_in_remedy, declaration.signed_out_message):
-        assert "KIMI_CODE_HOME=~/.kiro/crew/kimi-home kimi login" in text
+    # ``sign_in_remedy`` is plain text (no ``--``), so it names the region option in words.
+    assert "kimi login with its region option set to global" in declaration.sign_in_remedy
+    text = declaration.signed_out_message
+    assert "KIMI_CODE_HOME=~/.kiro/crew/kimi-home kimi login --region global" in text
+    assert "$env:KIMI_CODE_HOME=" in text and 'set "KIMI_CODE_HOME=' in text
     # Signed out on Windows, Kimi 2.7.2's ``session/new`` fails with -32000
     # "Authentication required"; on Linux ``kimi_signed_out`` reads the handshake.
     assert declaration.signed_out_signature == "Authentication required"
