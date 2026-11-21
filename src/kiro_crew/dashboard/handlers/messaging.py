@@ -267,14 +267,18 @@ from kiro_crew.dashboard.messaging_api.slack_workspace import (  # noqa: F401
     api_slack_reactions,
 )
 from kiro_crew.dashboard.messaging_api.spawn import (  # noqa: F401
+    _DENIES_KAS_MAY_DROP,
+    KIRO_CLI_ON_V3_NOTE,
     STOPPED_BEFORE_START_CODE,
     _app_bot_spawn_refusal,
     _app_token_spawn_refusal,
     _backend_name,
     _chain_note,
+    _child_file_needs_kiro_cli,
     _continue_on_loop,
     _failover_backend,
     _inherited_backend_name,
+    _kiro_cli_child_on_v3,
     _light_tier_pins,
     _lts_kiro_successor,
     _parent_run_is_silent,
@@ -284,6 +288,7 @@ from kiro_crew.dashboard.messaging_api.spawn import (  # noqa: F401
     _spawn_on_loop,
     _spawn_request_memory_mode,
     _stopped_before_start,
+    _tools_settings_need_kiro_cli,
     api_spawn,
     api_spawn_continue,
 )

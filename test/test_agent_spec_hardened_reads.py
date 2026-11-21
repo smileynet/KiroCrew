@@ -1213,6 +1213,12 @@ _EXPECTED_CALL_SITE_LABELS: dict[str, list[tuple[str, str]]] = {
         ("forward:operation", "forward:source"),
         ("resolve_agent_model", "unknown"),
     ],
+    # The spawn tools' roster reads each user-level spec to mark one that mounts
+    # nothing; a denial belongs to the sub-agent surface that lists the names.
+    "kiro_crew/mcp_tools/spawn_parts/schemas.py": [("spawn_roster", "subagent")],
+    # A Kiro CLI spawn child moves to KAS only when no spec it could run sets a deny
+    # KAS may drop; the fresh read belongs to the sub-agent surface admitting it.
+    "kiro_crew/dashboard/messaging_api/spawn.py": [("spawn_backend_move", "subagent")],
     # The spawn gate walks every spec for the PARENT agent's
     # ``toolsSettings.subagent.availableAgents`` allowlist, and keeps a file the
     # reader refuses as unreadable (refuse) rather than as "no spec"; a denial

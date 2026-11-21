@@ -959,3 +959,412 @@ class TestFollowUps:
         resp = await api_spawn_retry(request)
         retried = mgr.get(json.loads(resp.text)["id"])
         assert retried.backend == "claude"
+
+
+# ── A Kiro CLI child on a host whose kiro-cli offers v3 ───────────────────────
+
+
+class TestAKiroCliChildRunsOnV3:
+    """``backend: "kiro"`` moves onto KAS under the rule a stored Kiro CLI pick
+    follows (``kiro_on_kas_notice.kiro_cli_runs_on_kas``), and the receipt says so.
+    Without that evidence, on the bundle route, or for a failover hop it keeps
+    the Kiro CLI launch."""
+
+    @pytest.fixture
+    def kas_ready(self, selectable, monkeypatch, tmp_path):
+        """The ``selectable`` fixture, with KAS installed before the gateway started,
+        and a child agent ``plain`` whose file sets no ``deniedCommands``."""
+        from kiro_crew import agent_discovery
+        from kiro_crew.agent_sdk import backend_install
+        from kiro_crew.agent_sdk.backend_install import INSTALLED, BackendInstallState
+
+        agents = tmp_path / "user-agents"
+        agents.mkdir()
+        (agents / "plain.json").write_text(
+            json.dumps({"name": "plain", "tools": ["*"]}), encoding="utf-8"
+        )
+        monkeypatch.setattr(agent_discovery, "_KIRO_AGENTS_DIR", agents)
+        agent_discovery.clear_list_agents_cache()
+        real_probe = backend_install.probe_backend
+
+        def _probe(b):
+            if b == "kas":
+                return BackendInstallState(b, b, INSTALLED)
+            return real_probe(b)
+
+        monkeypatch.setattr(backend_install, "probe_backend", _probe)
+        return selectable
+
+    @staticmethod
+    def _named(body: dict) -> tuple[Any, Any]:
+        """``_real_request`` with a session manager, which a named agent's warm-up reads."""
+        request, mgr = _real_request(body)
+        request.app["state"].sessions = SimpleNamespace(_pool_cwd="")
+        return request, mgr
+
+    def _v3(self, monkeypatch, offered: bool) -> None:
+        from kiro_crew import kiro_on_kas_notice
+
+        monkeypatch.setattr(kiro_on_kas_notice, "kiro_cli_runs_on_kas", lambda: offered)
+
+    @pytest.mark.asyncio
+    async def test_a_kiro_child_starts_on_kas_and_the_receipt_says_so(self, kas_ready, monkeypatch):
+        from kiro_crew.dashboard.handlers.messaging import KIRO_CLI_ON_V3_NOTE, api_spawn
+
+        self._v3(monkeypatch, True)
+        request, mgr = self._named({"task": "x", "backend": "kiro", "agent": "plain"})
+        resp = await api_spawn(request)
+        assert resp.status == 200, resp.text
+        payload = json.loads(resp.text)
+        assert mgr.get(payload["id"]).backend == "kas"
+        assert payload["backend"] == "kas"
+        assert payload["runtime_note"] == KIRO_CLI_ON_V3_NOTE
+        assert "failover_from" not in payload
+
+    @pytest.mark.asyncio
+    async def test_without_v3_a_kiro_child_keeps_the_kiro_cli_launch(self, kas_ready, monkeypatch):
+        """No evidence, the bundle route or KAS denied all answer False there."""
+        from kiro_crew.dashboard.handlers.messaging import api_spawn
+
+        self._v3(monkeypatch, False)
+        request, mgr = self._named({"task": "x", "backend": "kiro", "agent": "plain"})
+        resp = await api_spawn(request)
+        payload = json.loads(resp.text)
+        assert mgr.get(payload["id"]).backend == ""
+        assert "runtime_note" not in payload
+
+    @pytest.mark.asyncio
+    async def test_a_kas_that_needs_a_restart_keeps_the_kiro_cli_launch(
+        self, kas_ready, monkeypatch
+    ):
+        from kiro_crew.agent_sdk import backend_install
+        from kiro_crew.agent_sdk.backend_install import INSTALLED, BackendInstallState
+        from kiro_crew.dashboard.handlers.messaging import api_spawn
+
+        ready_probe = backend_install.probe_backend
+        monkeypatch.setattr(
+            backend_install,
+            "probe_backend",
+            lambda b: (
+                BackendInstallState(b, b, INSTALLED, restart_required=True)
+                if b == "kas"
+                else ready_probe(b)
+            ),
+        )
+        self._v3(monkeypatch, True)
+        request, mgr = self._named({"task": "x", "backend": "kiro", "agent": "plain"})
+        resp = await api_spawn(request)
+        assert mgr.get(json.loads(resp.text)["id"]).backend == ""
+
+    @pytest.mark.asyncio
+    async def test_a_policy_that_denies_kas_keeps_the_kiro_cli_launch(self, kas_ready, monkeypatch):
+        """``kas`` not selectable: the child is not moved onto a backend whose own
+        spawn would be refused."""
+        from kiro_crew.dashboard.handlers.messaging import api_spawn
+
+        self._v3(monkeypatch, True)
+        kas_ready.remove("kas")
+        request, mgr = self._named({"task": "x", "backend": "kiro", "agent": "plain"})
+        resp = await api_spawn(request)
+        assert mgr.get(json.loads(resp.text)["id"]).backend == ""
+
+    @pytest.mark.asyncio
+    async def test_a_child_inheriting_a_kiro_pick_starts_on_kas(self, kas_ready, monkeypatch):
+        from kiro_crew import members
+        from kiro_crew.dashboard.handlers import messaging
+
+        self._v3(monkeypatch, True)
+
+        async def _persistent(*_a):
+            return "persistent"
+
+        monkeypatch.setattr(messaging, "_spawn_request_memory_mode", _persistent)
+        members.note_session_backend_pick("w", "kiro")
+        request, mgr = _request({"task": "x", "parent_session": "dashboard:w", "agent": "plain"})
+        request.app["state"]._slots = {}
+        request.app["state"].sessions = SimpleNamespace(
+            get_agent_selection=lambda key: ("template", "")
+        )
+        response = await messaging.api_spawn(request)
+        assert response.status == 200, response.text
+        assert mgr.spawn.call_args.kwargs["backend"] == "kas"
+
+    @pytest.mark.asyncio
+    async def test_a_failover_hop_onto_kiro_is_not_moved(self, kas_ready, monkeypatch):
+        """The hop was taken because a backend could not start; moving it could send
+        it back there."""
+        self._v3(monkeypatch, True)
+        TestSpawnFailover()._failover(monkeypatch, {"enabled": True, "chain": ["pi", "kiro"]})
+        from kiro_crew.dashboard.handlers.messaging import api_spawn
+
+        request, mgr = _real_request({"task": "x", "backend": "pi"})
+        resp = await api_spawn(request)
+        payload = json.loads(resp.text)
+        assert (payload["backend"], payload["failover_from"]) == ("kiro", "pi")
+        assert mgr.get(payload["id"]).backend == ""
+
+    @pytest.mark.asyncio
+    async def test_a_named_kas_child_is_untouched(self, kas_ready, monkeypatch):
+        from kiro_crew.dashboard.handlers.messaging import api_spawn
+
+        self._v3(monkeypatch, True)
+        request, mgr = _real_request({"task": "x", "backend": "kas"})
+        resp = await api_spawn(request)
+        payload = json.loads(resp.text)
+        assert mgr.get(payload["id"]).backend == "kas"
+        assert "runtime_note" not in payload
+
+    def test_the_tool_receipt_shows_the_note(self):
+        """``spawn_run`` renders the gateway's ``runtime_note`` under the run."""
+        from kiro_crew import mcp_core
+        from kiro_crew.dashboard.handlers.messaging import KIRO_CLI_ON_V3_NOTE
+
+        posted = {"id": "a1", "status": "spawned", "backend": "kas"}
+        posted["runtime_note"] = KIRO_CLI_ON_V3_NOTE
+        with patch.object(mcp_core, "_post", return_value=posted):
+            out = _drive(mcp_core._call_tool_inner("spawn_run", {"task": "t", "backend": "kiro"}))
+        assert KIRO_CLI_ON_V3_NOTE in str(out)
+
+
+class TestAChildWhoseFileDeniesCommandsStaysOnKiroCli:
+    """kiro-cli refuses a ``deniedCommands`` regex itself, while on KAS an entry that
+    neither travels as a deny rule nor is read by Kiro Crew's gate refuses nothing.
+    So a Kiro CLI child whose own file sets the key is not moved."""
+
+    @pytest.fixture
+    def agents(self, tmp_path, monkeypatch):
+        from kiro_crew import agent_discovery
+        from kiro_crew.config import paths as paths_mod
+
+        user = tmp_path / "user-agents"
+        user.mkdir()
+        mates = tmp_path / "mates-agents"
+        mates.mkdir()
+        monkeypatch.setattr(agent_discovery, "_KIRO_AGENTS_DIR", user)
+        monkeypatch.setattr(paths_mod, "mate_agents_dir", lambda: mates)
+        agent_discovery.clear_list_agents_cache()
+        yield user
+        agent_discovery.clear_list_agents_cache()
+
+    @staticmethod
+    def _write(folder, name: str, spec: dict) -> None:
+        folder.mkdir(parents=True, exist_ok=True)
+        (folder / f"{name}.json").write_text(json.dumps({"name": name, **spec}), encoding="utf-8")
+
+    @pytest.mark.parametrize(
+        "tools_settings, stays",
+        [
+            pytest.param({"execute_bash": {"deniedCommands": ["(rm|shred) .*"]}}, True, id="bash"),
+            pytest.param({"shell": {"deniedCommands": ["touch .*"]}}, True, id="shell-alias"),
+            pytest.param({"executeBash": {"deniedCommands": []}}, True, id="empty-list"),
+            pytest.param({"execute_bash": {"allowedCommands": ["ls .*"]}}, False, id="allow-only"),
+            pytest.param({"fs_write": {"deniedPaths": ["/etc"]}}, True, id="write-denied-paths"),
+            pytest.param({"fs_read": {"deniedPaths": ["~/.ssh"]}}, True, id="read-denied-paths"),
+            pytest.param({"grep": {"deniedPaths": ["/secret"]}}, True, id="grep-denied-paths"),
+            pytest.param({"fs_write": {"allowedPaths": ["/tmp/**"]}}, False, id="write-allow"),
+            pytest.param({"web_fetch": {"blocked": ["evil\\.com"]}}, True, id="fetch-blocked"),
+            pytest.param({"web_fetch": {"trusted": ["https://x"]}}, False, id="fetch-trusted"),
+            pytest.param({"subagent": {"availableAgents": ["a*"]}}, False, id="sub-available"),
+            pytest.param({"crew": {"availableAgents": []}}, False, id="crew-alias"),
+            pytest.param({"subagent": {"trustedAgents": ["a"]}}, False, id="sub-trusted"),
+            pytest.param({"use_aws": {"deniedServices": ["iam"]}}, True, id="aws-denied"),
+            pytest.param({"aws": {"allowedServices": ["s3"]}}, False, id="aws-allow"),
+            pytest.param({"some_new_tool": {"deny": ["x"]}}, True, id="unknown-tool"),
+            pytest.param({"some_new_tool": {}}, False, id="unknown-tool-empty"),
+            pytest.param({"shell": "deny"}, True, id="not-an-object"),
+            pytest.param(None, False, id="no-tools-settings"),
+        ],
+    )
+    def test_the_table(self, agents, tools_settings, stays):
+        from kiro_crew.dashboard.handlers.messaging import _child_file_needs_kiro_cli
+
+        spec = {"tools": ["*"]}
+        if tools_settings is not None:
+            spec["toolsSettings"] = tools_settings
+        self._write(agents, "child", spec)
+        assert _child_file_needs_kiro_cli("child", ()) is stays
+
+    def test_a_missing_file_does_not_hold_the_child(self, agents):
+        from kiro_crew.dashboard.handlers.messaging import _child_file_needs_kiro_cli
+
+        assert _child_file_needs_kiro_cli("ghost", ()) is False
+
+    def test_the_checkout_file_kiro_cli_resolves_first_decides(self, agents, tmp_path):
+        """kiro-cli resolves ``--agent`` in the child's ``.kiro/agents`` first."""
+        from kiro_crew.dashboard.handlers.messaging import _child_file_needs_kiro_cli
+
+        self._write(agents, "child", {"tools": ["*"]})
+        project = tmp_path / "proj"
+        denied = {"toolsSettings": {"execute_bash": {"deniedCommands": ["rm .*"]}}}
+        self._write(project / ".kiro" / "agents", "child", {"tools": ["*"], **denied})
+        assert _child_file_needs_kiro_cli("child", (str(project),)) is True
+        assert _child_file_needs_kiro_cli("child", ()) is False
+
+    def test_any_spec_that_could_be_the_child_holds_it(self, agents, tmp_path):
+        """Which file a launch runs depends on scope order, declared names and pins,
+        and the engines differ, so every candidate counts: a second user-level file
+        declaring the name, a checkout file, or one in the pool's work dir."""
+        from kiro_crew.dashboard.handlers.messaging import _child_file_needs_kiro_cli
+
+        denied = {"toolsSettings": {"execute_bash": {"deniedCommands": ["touch \\p{L}+"]}}}
+        self._write(agents, "child", {"tools": ["*"]})
+        (agents / "zz-other.json").write_text(
+            json.dumps({"name": "child", "tools": ["*"], **denied}), encoding="utf-8"
+        )
+        assert _child_file_needs_kiro_cli("child", ()) is True
+        (agents / "zz-other.json").unlink()
+        pool = tmp_path / "pool"
+        self._write(pool / ".kiro" / "agents", "child", {"tools": ["*"], **denied})
+        assert _child_file_needs_kiro_cli("child", ("", str(pool))) is True
+        assert _child_file_needs_kiro_cli("child", ()) is False
+
+    def test_two_candidates_hold_even_with_no_deny(self, agents, tmp_path):
+        """Two specs that could carry the name: which one a launch runs is not this
+        check's to decide, so the child stays even when neither sets a deny."""
+        from kiro_crew.dashboard.handlers.messaging import _child_file_needs_kiro_cli
+
+        self._write(agents, "child", {"tools": ["*"]})
+        assert _child_file_needs_kiro_cli("child", ()) is False
+        self._write(tmp_path / "mates-agents", "child", {"tools": ["*"]})
+        assert _child_file_needs_kiro_cli("child", ()) is True
+
+    def test_one_folder_named_twice_is_one_candidate(self, agents, monkeypatch):
+        from kiro_crew.config import paths as paths_mod
+        from kiro_crew.dashboard.handlers.messaging import _child_file_needs_kiro_cli
+
+        monkeypatch.setattr(paths_mod, "mate_agents_dir", lambda: agents)
+        self._write(agents, "child", {"tools": ["*"]})
+        assert _child_file_needs_kiro_cli("child", ()) is False
+
+    @pytest.mark.asyncio
+    async def test_the_parent_s_project_dirs_reach_the_check(
+        self, agents, selectable, monkeypatch, tmp_path
+    ):
+        """Discovery reads the parent session's project dirs too, so a copy there that
+        denies commands holds the child (a user file of the same name sets none)."""
+        from kiro_crew import kiro_on_kas_notice
+        from kiro_crew.dashboard.handlers import messaging
+        from kiro_crew.dashboard.handlers.messaging import api_spawn
+
+        parent_slot = tmp_path / "slot"
+        denied = {"toolsSettings": {"shell": {"deniedCommands": ["rm .*"]}}}
+        self._write(parent_slot / ".kiro" / "agents", "dup", {"tools": ["*"], **denied})
+        self._write(agents, "dup", {"tools": ["*"]})
+        monkeypatch.setattr(messaging, "parent_project_dirs", lambda _key: (str(parent_slot),))
+        monkeypatch.setattr(
+            messaging, "_spawn_request_memory_mode", AsyncMock(return_value="persistent")
+        )
+        monkeypatch.setattr(kiro_on_kas_notice, "kas_backend_offered", lambda: True)
+        monkeypatch.setattr(kiro_on_kas_notice, "kiro_cli_runs_on_kas", lambda: True)
+        request, mgr = _real_request(
+            {"task": "x", "backend": "kiro", "agent": "dup", "parent_session": "p:1"}
+        )
+        request.app["state"].sessions = SimpleNamespace(_pool_cwd="")
+        resp = await api_spawn(request)
+        assert resp.status == 200, resp.text
+        assert mgr.get(json.loads(resp.text)["id"]).backend == ""
+
+    def test_a_same_mtime_rewrite_is_read_fresh(self, agents):
+        """A deny added by a timestamp-preserving copy is seen: no catalog snapshot."""
+        import os
+
+        from kiro_crew.agent_discovery import parsed_agent_specs
+        from kiro_crew.dashboard.handlers.messaging import _child_file_needs_kiro_cli
+
+        self._write(agents, "child", {"tools": ["*"]})
+        target = agents / "child.json"
+        stamp = target.stat()
+        parsed_agent_specs(agents, operation="test", source="test")  # warm the snapshot
+        assert _child_file_needs_kiro_cli("child", ()) is False
+        denied = {"toolsSettings": {"shell": {"deniedCommands": ["touch \\p{L}+"]}}}
+        self._write(agents, "child", {"tools": ["*"], **denied})
+        os.utime(target, ns=(stamp.st_atime_ns, stamp.st_mtime_ns))
+        assert _child_file_needs_kiro_cli("child", ()) is True
+
+    def test_an_unreadable_own_file_holds(self, agents):
+        from kiro_crew.dashboard.handlers.messaging import _child_file_needs_kiro_cli
+
+        (agents / "child.json").write_text("{not json", encoding="utf-8")
+        assert _child_file_needs_kiro_cli("child", ()) is True
+
+    def test_any_checkout_candidate_holds(self, agents, tmp_path):
+        """KAS takes only a few keys of a checkout's spec (no ``toolsSettings``, no
+        ``allowedTools``, no hooks unless consented), so a checkout candidate holds
+        even when it sets no deny: ``denyByDefault`` and ``fallbackAction`` included."""
+        from kiro_crew.dashboard.handlers.messaging import _child_file_needs_kiro_cli
+
+        project = tmp_path / "proj"
+        narrow = {"toolsSettings": {"shell": {"denyByDefault": True, "allowedCommands": []}}}
+        self._write(project / ".kiro" / "agents", "child", {"tools": ["*"], **narrow})
+        assert _child_file_needs_kiro_cli("child", (str(project),)) is True
+        self._write(project / ".kiro" / "agents", "child", {"tools": ["*"]})
+        assert _child_file_needs_kiro_cli("child", (str(project),)) is True
+        assert _child_file_needs_kiro_cli("other", (str(project),)) is False
+
+    def test_a_bot_s_own_file_counts(self, agents, tmp_path):
+        """KAS resolves a live Bot's file before a same-named checkout agent."""
+        from kiro_crew.dashboard.handlers.messaging import _child_file_needs_kiro_cli
+
+        denied = {"toolsSettings": {"shell": {"deniedCommands": ["touch \\p{L}+"]}}}
+        self._write(tmp_path / "mates-agents", "scout", {"tools": ["*"], **denied})
+        assert _child_file_needs_kiro_cli("scout", ()) is True
+
+    def test_a_home_relative_work_dir_is_expanded(self, agents, tmp_path, monkeypatch):
+        """The spawn gate expands ``~`` before the child runs there, so the check does."""
+        from kiro_crew.dashboard.handlers.messaging import _child_file_needs_kiro_cli
+
+        monkeypatch.setenv("HOME", str(tmp_path))
+        denied = {"toolsSettings": {"shell": {"deniedCommands": ["rm .*"]}}}
+        self._write(tmp_path / "repo" / ".kiro" / "agents", "child", {"tools": ["*"], **denied})
+        assert _child_file_needs_kiro_cli("child", ("~/repo",)) is True
+
+    def test_a_relative_work_dir_holds_the_child(self, agents):
+        from kiro_crew.dashboard.handlers.messaging import _child_file_needs_kiro_cli
+
+        assert _child_file_needs_kiro_cli("child", ("repo",)) is True
+
+    def test_an_unnamed_child_is_held(self, agents):
+        """A child that names no agent runs its parent's or a Bot's template, which
+        admission resolves later, so its spec cannot be read here: it stays."""
+        from kiro_crew.dashboard.handlers.messaging import _child_file_needs_kiro_cli
+
+        self._write(agents, "kirocrew", {"tools": ["*"]})
+        assert _child_file_needs_kiro_cli("", ()) is True
+
+    @pytest.mark.asyncio
+    async def test_an_unnamed_or_bot_kiro_child_keeps_the_kiro_cli_launch(
+        self, agents, selectable, monkeypatch
+    ):
+        """No ``agent``, or a ``crew`` / ``target_member`` child: the endpoint hands the
+        check no agent, so the child stays (the parent's template may deny commands)."""
+        from kiro_crew import kiro_on_kas_notice
+        from kiro_crew.dashboard.handlers.messaging import api_spawn
+
+        monkeypatch.setattr(kiro_on_kas_notice, "kas_backend_offered", lambda: True)
+        monkeypatch.setattr(kiro_on_kas_notice, "kiro_cli_runs_on_kas", lambda: True)
+        request, mgr = _real_request({"task": "x", "backend": "kiro"})
+        resp = await api_spawn(request)
+        assert resp.status == 200, resp.text
+        assert mgr.get(json.loads(resp.text)["id"]).backend == ""
+
+    @pytest.mark.asyncio
+    async def test_such_a_kiro_child_keeps_the_kiro_cli_launch(
+        self, agents, selectable, monkeypatch
+    ):
+        from kiro_crew import kiro_on_kas_notice
+        from kiro_crew.agent_sdk import backend_install
+        from kiro_crew.agent_sdk.backend_install import INSTALLED, BackendInstallState
+        from kiro_crew.dashboard.handlers.messaging import _kiro_cli_child_on_v3
+
+        real_probe = backend_install.probe_backend
+        monkeypatch.setattr(
+            backend_install,
+            "probe_backend",
+            lambda b: BackendInstallState(b, b, INSTALLED) if b == "kas" else real_probe(b),
+        )
+        monkeypatch.setattr(kiro_on_kas_notice, "kiro_cli_runs_on_kas", lambda: True)
+        denied = {"toolsSettings": {"execute_bash": {"deniedCommands": ["(rm|shred) .*"]}}}
+        self._write(agents, "narrow", {"tools": ["*"], **denied})
+        self._write(agents, "plain", {"tools": ["*"]})
+        assert await _kiro_cli_child_on_v3("", None, "narrow", ()) == ("", "")
+        assert (await _kiro_cli_child_on_v3("", None, "plain", ()))[0] == "kas"

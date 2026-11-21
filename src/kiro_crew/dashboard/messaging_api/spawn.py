@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import inspect
+from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any
 
 from aiohttp import web
@@ -39,6 +40,7 @@ if TYPE_CHECKING:
         effort_pending_note,
         internal_memory_scope,
         ledger_of,
+        logger,
         parent_project_dirs,
         parent_template_spawn_policy,
         parent_work_supported,
@@ -346,6 +348,185 @@ async def _requested_backend(
     )
 
 
+#: The receipt's ``runtime_note`` for a Kiro CLI child moved onto kiro-cli's v3 engine.
+KIRO_CLI_ON_V3_NOTE = (
+    "backend 'kiro' ran on kiro-cli's v3 engine, through Kiro Crew's 'kas' backend: "
+    "kiro-cli is retiring its v2 engine."
+)
+
+
+#: The deny-type ``toolsSettings`` entries, by kiro-cli tool family, that the KAS
+#: projection does not carry in full (``acp.kas_permissions.tools_settings_to_permissions``),
+#: so a child setting one keeps the Kiro CLI launch, where kiro-cli applies it itself:
+#: ``deniedCommands`` (an entry with no glob form and no gate reading refuses nothing),
+#: ``deniedPaths`` (an entry past the projection's pattern bound is dropped),
+#: and ``web_fetch.blocked`` (an entry with no host glob refuses nothing).
+#: ``subagent.availableAgents`` is not here: a pattern it cannot express denies
+#: instead (``acp.kas_subagent_rules``), and Crew's spawn gate reads it too. The
+#: table is in the subagent spec.
+_DENIES_KAS_MAY_DROP: dict[str, tuple[str, ...]] = {
+    "shell": ("deniedCommands",),
+    "read": ("deniedPaths",),
+    "write": ("deniedPaths",),
+    "web_fetch": ("blocked",),
+}
+
+
+def _tools_settings_need_kiro_cli(raw: object) -> bool:
+    """Whether a child's ``toolsSettings`` sets a deny KAS may not apply in full.
+
+    Folded the way kiro-cli loads it (``canonical_tools_settings``). A key in
+    :data:`_DENIES_KAS_MAY_DROP` that is present holds, even with an empty value;
+    so does ``use_aws.deniedServices`` (it travels as a shell deny that
+    ``aws --profile x <service>`` slips), and any non-empty entry under a tool the
+    projection does not know (it is named lost there). Allows hold nothing: a lost
+    allow only prompts.
+    """
+    from kiro_crew.platform.tools_settings_aliases import (
+        _TOOLS_SETTINGS_FAMILY,
+        canonical_tools_settings,
+    )
+
+    settings, _dropped = canonical_tools_settings(raw)
+    if not isinstance(settings, dict):
+        return bool(settings)
+    for tool, entry in settings.items():
+        if not isinstance(entry, dict):
+            if entry:
+                return True
+            continue
+        if tool == "use_aws":
+            if "deniedServices" in entry:
+                return True
+            continue
+        family = _TOOLS_SETTINGS_FAMILY.get(tool) if isinstance(tool, str) else None
+        if family is None:
+            if any(entry.values()):
+                return True
+            continue
+        if any(key in entry for key in _DENIES_KAS_MAY_DROP.get(family, ())):
+            return True
+    return False
+
+
+def _child_file_needs_kiro_cli(agent: str, work_dirs: Iterable[str]) -> bool:
+    """Whether any spec the Kiro CLI child *agent* could run sets a deny KAS may drop.
+
+    kiro-cli applies every ``toolsSettings`` deny itself; on KAS some entries refuse
+    nothing (:func:`_tools_settings_need_kiro_cli`). So such a child stays on the
+    Kiro CLI launch, as before this move. Which file a launch then runs depends on
+    scope order, declared names and ``agent.spec_pins``, and the two engines do not
+    resolve alike, so this does not pick one: EVERY spec that could be *agent* counts,
+    in ``<dir>/.kiro/agents`` of each of *work_dirs* (``~`` expanded, real path), at
+    the user level and in the crewmate folder (``mate_agents_dir``), matched by file
+    stem or declared ``name``. A candidate in a checkout holds whatever it sets: KAS
+    takes only a few keys of a checkout's spec. So do two candidates in distinct
+    folders: which one a launch runs is not decided here. Fails closed (True): no
+    *agent* (the child runs its parent's or a Bot's template, which admission
+    resolves later), a work dir that is not absolute once expanded, and a read that
+    raises. Blocking (spec reads).
+    """
+    import os
+
+    from kiro_crew.agent_discovery import _kiro_agents_dir, _read_agent_spec
+    from kiro_crew.agent_spec_format import iter_agent_spec_files
+    from kiro_crew.config.paths import mate_agents_dir, project_agents_dir
+
+    if not agent:
+        return True
+    try:
+        dirs: list[Any] = []
+        for raw in work_dirs:
+            if not raw:
+                continue
+            expanded = os.path.expanduser(raw)
+            if not os.path.isabs(expanded):
+                return True
+            dirs.append(project_agents_dir(os.path.realpath(expanded)))
+        checkouts = len(dirs)
+        dirs.append(None)  # the user-level agents directory
+        # A Bot's own file, which the KAS projection resolves before the checkout.
+        dirs.append(mate_agents_dir())
+        found = 0
+        seen: set[str] = set()
+        for index, agents_dir in enumerate(dirs):
+            # A fresh hardened read of every file, never the catalog snapshot: that
+            # is revalidated by name and mtime, and this decides an engine move.
+            folder = agents_dir if agents_dir is not None else _kiro_agents_dir()
+            # One folder named twice (the child's cwd is the pool's) is one candidate.
+            resolved = os.path.realpath(folder)
+            if resolved in seen:
+                continue
+            seen.add(resolved)
+            for path in iter_agent_spec_files(folder) if folder.is_dir() else ():
+                data = _read_agent_spec(path, operation="spawn_backend_move", source="subagent")
+                if data is None:
+                    if path.stem == agent:
+                        return True  # its own file, unreadable: cannot clear it
+                    continue
+                if path.stem != agent and data.get("name") != agent:
+                    continue
+                # A checkout's spec runs on KAS with only a few keys kept
+                # (``acp.harness.kas.PROJECT_SPEC_HONOURED_KEYS``): its
+                # ``toolsSettings``, ``allowedTools`` and hooks never reach it there.
+                if index < checkouts:
+                    return True
+                if _tools_settings_need_kiro_cli(data.get("toolsSettings")):
+                    return True
+                # Two specs that could carry the name: which one a launch runs is
+                # not this check's to decide, so the child keeps the Kiro CLI launch.
+                found += 1
+                if found > 1:
+                    return True
+        return False
+    except Exception:  # noqa: BLE001 -- unknown keeps the child where it was
+        logger.debug("could not read the child spec for the kiro move", exc_info=True)
+        return True
+
+
+async def _kiro_cli_child_on_v3(
+    backend: str | None,
+    failover_from: str | None,
+    agent: str = "",
+    work_dirs: tuple[str, ...] = (),
+) -> tuple[str | None, str]:
+    """The backend a Kiro CLI child starts on, and the receipt note when it moved.
+
+    A spawn's ``backend: "kiro"``, named or inherited from the parent's
+    ``session_create`` pick, moves onto KAS under the rule a stored Kiro CLI pick
+    follows (``kiro_on_kas_notice.kiro_cli_runs_on_kas``: this host's kiro-cli is
+    confirmed to offer v3, KAS is selectable, and the KAS bundle route is off). Only
+    an admitted Kiro CLI id is judged here, so every refusal and failover above keeps
+    its answer. A failover hop onto Kiro CLI is not moved: it was taken because a
+    backend could not start, and moving it could send it back to that backend.
+    """
+    from kiro_crew import kiro_on_kas_notice
+    from kiro_crew.acp_backends import ACP_BACKEND_KAS, ACP_BACKEND_KIRO
+
+    if not (backend == ACP_BACKEND_KIRO and failover_from is None):
+        return backend, ""
+
+    def _kas_serves_it() -> bool:
+        # Held to the admission a named ``kas`` gets, then to the stored-pick rule,
+        # and only for a child whose own file KAS enforces as tightly as kiro-cli.
+        return (
+            kiro_on_kas_notice.kas_backend_offered()
+            and kiro_on_kas_notice.kiro_cli_runs_on_kas()
+            and not _child_file_needs_kiro_cli(agent, work_dirs)
+        )
+
+    if not await asyncio.to_thread(_kas_serves_it):
+        return backend, ""
+    # INFO, the level of the Bot harness remap (``loader_builders._note_member_remap``),
+    # so gateway.log shows it only at INFO; the receipt's note and the run record's
+    # ``backend`` are what the caller and the dashboard read.
+    logger.info(
+        "spawn: backend 'kiro' starts on KAS, because this host's kiro-cli offers its "
+        "v3 engine and its v2 engine is being retired"
+    )
+    return ACP_BACKEND_KAS, KIRO_CLI_ON_V3_NOTE
+
+
 def _qualified_model_refusal(
     request: web.Request, model: str, backend: str | None, raw_backend: object
 ) -> web.Response | None:
@@ -620,6 +801,20 @@ async def api_spawn(request: web.Request) -> web.Response:
     backend, failover_from, backend_refusal = await _requested_backend(requested_backend)
     if backend_refusal is not None:
         return backend_refusal
+    backend, engine_note = await _kiro_cli_child_on_v3(
+        backend,
+        failover_from,
+        # Only a child that names its agent, and is not another Bot, runs a spec this
+        # check can read before admission; any other child keeps the Kiro CLI launch.
+        "" if cleaned.get("crew") or cleaned.get("target_member") else cleaned.get("agent") or "",
+        # Every project scope this spawn knows: the child's own ``cwd``, the pool's,
+        # which ``run_turn`` falls back to, and the parent's, which discovery reads.
+        (
+            str(cleaned.get("cwd") or ""),
+            str(getattr(getattr(state, "sessions", None), "_pool_cwd", "") or ""),
+            *(str(d) for d in parent_dirs),
+        ),
+    )
     # The name of the backend the run starts on, as the request spells it.
     ran_on = _backend_name(backend) if backend is not None else None
     model_refusal = _qualified_model_refusal(request, cleaned.get("model") or "", backend, ran_on)
@@ -1064,7 +1259,7 @@ async def api_spawn(request: web.Request) -> web.Response:
             return ""
         return PINNED_RUNTIME_NOTE
 
-    runtime_note = await asyncio.to_thread(_runtime_note)
+    runtime_note = "; ".join(n for n in (engine_note, await asyncio.to_thread(_runtime_note)) if n)
     if runtime_note:
         resp["runtime_note"] = runtime_note
     if light_note:

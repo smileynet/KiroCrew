@@ -1294,9 +1294,12 @@ def kiro_cli_pick_backend() -> str:
     default (a bare ``acp`` serves v3 from 3.0.0, though its help still says v2).
     See :data:`KIRO_SELECTION_BACKEND`.
 
-    Called only where the stored value is read (``_read_backend_choice``), never
-    from :func:`resolve_selected_backend`: an already-resolved Kiro CLI id may be
-    a degraded value's floor (harness-parity H3), not a pick.
+    Called only where a Kiro CLI pick is read: the stored value
+    (``_read_backend_choice``, a Bot's pin in ``crewmate_harness``) and a spawn's
+    admitted ``backend: "kiro"`` (``kiro_on_kas_notice.kiro_cli_runs_on_kas`` from
+    ``dashboard.messaging_api.spawn``); never from :func:`resolve_selected_backend`:
+    an already-resolved Kiro CLI id may be a degraded value's floor
+    (harness-parity H3), not a pick.
     """
     if _kiro_cli_offers_kas and KIRO_SELECTION_BACKEND in selectable_backends():
         return KIRO_SELECTION_BACKEND

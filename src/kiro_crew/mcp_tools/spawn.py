@@ -966,10 +966,13 @@ if TYPE_CHECKING:  # every owner-defined name in _EXPORTS, for type checkers and
         _CORE,
         _MAX_ROSTER_NAMES,
         _SPAWN,
+        _TOOLLESS_MARK,
         _agent_roster_hint,
         _parent_allowlist_filter,
         _parent_template_for_roster,
+        _roster_with_tools_first,
         _subagent_reader,
+        _toolless_agent_names,
         schemas,
     )
     from kiro_crew.mcp_tools.spawn_parts.session_memory import (  # noqa: F401

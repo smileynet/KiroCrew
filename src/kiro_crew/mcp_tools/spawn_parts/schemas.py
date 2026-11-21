@@ -20,12 +20,19 @@ defines it (the sub-agent readers: :mod:`kiro_crew.subagent_standalone`).
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Collection, Iterable
 from typing import Any
 
 from kiro_crew import resource_status as host_status
 from kiro_crew import subagent_standalone
-from kiro_crew.agent_discovery import is_internal_agent_spec, list_agents
+from kiro_crew.agent_discovery import (
+    SCOPE_GLOBAL,
+    _kiro_agents_dir,
+    _read_agent_spec,
+    is_internal_agent_spec,
+    list_agents,
+    spec_is_toolless,
+)
 from kiro_crew.config.loader import KiroCrewConfig
 from kiro_crew.constants import DEFAULT_SUBAGENT_MAX_TURNS
 from kiro_crew.execution_context import read_session_execution
@@ -94,6 +101,56 @@ def _parent_allowlist_filter(names: Iterable[str]) -> tuple[list[str], bool]:
     return [n for n in names if all(matches(n, al) for al in allowlists)], True
 
 
+#: The mark a roster puts after an agent whose spec mounts no tool at all.
+_TOOLLESS_MARK = " (no tools)"
+
+
+def _toolless_agent_names(rows: Iterable[Any]) -> set[str]:
+    """The names of the user-level *rows* whose spec mounts nothing (``spec_is_toolless``).
+
+    Read through the hardened spec reader, one bounded read per row; a row with no file
+    name, or a spec that cannot be read, is not tool-less (no mark is the safe answer).
+    Blocking: the caller holds the roster's own ``try``.
+    """
+    agents_dir = _kiro_agents_dir()
+    names: set[str] = set()
+    for row in rows:
+        name, filename = getattr(row, "name", ""), getattr(row, "filename", "")
+        if not (isinstance(name, str) and name and isinstance(filename, str) and filename):
+            continue
+        if getattr(row, "scope", SCOPE_GLOBAL) != SCOPE_GLOBAL:
+            continue
+        spec = _read_agent_spec(agents_dir / filename, operation="spawn_roster", source="subagent")
+        if spec_is_toolless(spec):
+            names.add(name)
+    return names
+
+
+def _roster_with_tools_first(
+    names: list[str],
+    toolless: Collection[str],
+    *,
+    limit: int | None,
+    exclude: Iterable[str] | None = None,
+) -> tuple[list[str], int]:
+    """*names* rendered as a roster: agents with tools first, *toolless* ones marked last.
+
+    A tool-less agent (:func:`_toolless_agent_names`) can only answer in text, and a bare
+    name in front of a model reads like any other child, so a file job sent to one was
+    lost. Each part keeps the caller's order and goes through ``visible_agent_names``
+    (grammar, redaction, bound), the tool-less part taking what the bound leaves, so a cap
+    cuts tool-less names first. Returns ``(shown, withheld)``.
+    """
+    visible = _subagent_reader("visible_agent_names")
+    kwargs: dict[str, Any] = {} if exclude is None else {"exclude": exclude}
+    with_tools, withheld = visible([n for n in names if n not in toolless], limit=limit, **kwargs)
+    if not toolless:
+        return with_tools, withheld
+    room = None if limit is None else max(limit - len(with_tools), 0)
+    marked, withheld_marked = visible([n for n in names if n in toolless], limit=room, **kwargs)
+    return [*with_tools, *(n + _TOOLLESS_MARK for n in marked)], withheld + withheld_marked
+
+
 def _agent_roster_hint() -> str:
     """Valid agent names, for the ``agent``/``agents`` parameter descriptions.
 
@@ -126,14 +183,15 @@ def _agent_roster_hint() -> str:
         # spec forbids spawning are dropped FIRST: advertising them would send
         # the model straight into the gate's refusal. So are Kiro Crew's own
         # generated specs (``is_internal_agent_spec``), which the gate refuses.
-        names, restricted = _parent_allowlist_filter(
-            sorted(
-                a.name
-                for a in loaded_binding(_CORE, "list_agents", list_agents)()
-                if a.name and not is_internal_agent_spec(a)
-            )
+        rows = [
+            a
+            for a in loaded_binding(_CORE, "list_agents", list_agents)()
+            if a.name and not is_internal_agent_spec(a)
+        ]
+        names, restricted = _parent_allowlist_filter(sorted(a.name for a in rows))
+        shown, withheld = _roster_with_tools_first(
+            names, _toolless_agent_names(rows), limit=_MAX_ROSTER_NAMES
         )
-        shown, withheld = _subagent_reader("visible_agent_names")(names, limit=_MAX_ROSTER_NAMES)
     except Exception:
         return ""  # never let a directory read break the tool advertisement
     if not shown:
