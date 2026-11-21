@@ -40,6 +40,7 @@ from kiro_crew.agent_sdk.backends import (
     ACP_BACKEND_COPILOT,
     ACP_BACKEND_DEEPSEEK,
     ACP_BACKEND_GOOSE,
+    ACP_BACKEND_KIMI,
     ACP_BACKEND_MIMOCODE,
     ACP_BACKEND_OPENCODE,
     ACP_BACKEND_STRANDS,
@@ -74,6 +75,7 @@ _MIMOCODE_BIN = "/opt/bin/mimo"
 _GOOSE_BIN = "/opt/bin/goose"
 _DEEPSEEK_BIN = "/opt/bin/dsh"
 _COPILOT_BIN = "/opt/bin/copilot"
+_KIMI_BIN = "/opt/bin/kimi"
 _STRANDS_BIN = "/opt/bin/strands"
 # The Strands gate module, sealed into its project directory in the gate leaf.
 _STRANDS_PROJECT = "/opt/run/strands"
@@ -451,6 +453,7 @@ def _stub_common(stack: list, rec: _Recorder, tmp_path: Path, backend: str = "")
                     ACP_BACKEND_GOOSE: (_GOOSE_BIN, _SEARCH_PATH),
                     ACP_BACKEND_DEEPSEEK: (_DEEPSEEK_BIN, _SEARCH_PATH),
                     ACP_BACKEND_COPILOT: (_COPILOT_BIN, _SEARCH_PATH),
+                    ACP_BACKEND_KIMI: (_KIMI_BIN, _SEARCH_PATH),
                     ACP_BACKEND_STRANDS: (_STRANDS_BIN, _SEARCH_PATH),
                 }[backend],
             ),

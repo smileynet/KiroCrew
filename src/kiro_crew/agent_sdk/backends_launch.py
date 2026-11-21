@@ -26,6 +26,7 @@ from kiro_crew.agent_sdk.backends import (
     ACP_BACKEND_DEEPSEEK,
     ACP_BACKEND_GOOSE,
     ACP_BACKEND_KAS,
+    ACP_BACKEND_KIMI,
     ACP_BACKEND_KIRO,
     ACP_BACKEND_MIMOCODE,
     ACP_BACKEND_OPENCODE,
@@ -184,6 +185,13 @@ class SelfServedLaunch:
 #: Re-measure against a fresh capture before raising it.
 COPILOT_VERIFIED_VERSION = "1.0.100"
 
+#: The one Kimi Code CLI release Crew's Kimi routing was observed on (``kimi acp``
+#: answers ``agentInfo: {name: "Kimi Code CLI", version: "2.7.2"}``). The install hint
+#: pins it, and a session on any other release, or on the archived Python ``kimi-cli``
+#: (which also installs ``kimi`` and also answers ``kimi acp``), is refused at the
+#: handshake (``acp.client_kimi_session``). Re-observe before raising it.
+KIMI_VERIFIED_VERSION = "2.7.2"
+
 #: The one Strands CLI release Crew's Strands gate is verified on: its
 #: Python-project ACP server forwards a Strands interrupt as
 #: ``session/request_permission`` and refuses a non-empty ``session/new``
@@ -300,6 +308,28 @@ ACP_BACKEND_LAUNCH: Mapping[str, SelfServedLaunch] = {
             "Install the official Strands CLI; its default --acp-server profile is "
             "not used, Kiro Crew starts it on a Python project it gates."
         ),
+    ),
+    # ``kimi acp`` is Kimi Code CLI's own ACP mode, with no adapter package. Pinned
+    # for Copilot's reason: an unpinned install lands on a release the handshake
+    # refuses. Auto-update is on by default in Kimi (``[upgrade].auto_install``); a
+    # drifted release is refused at the handshake, so the pin cannot silently move.
+    # The ``kimi`` name is shared with the archived Python ``kimi-cli``; the
+    # handshake checks ``agentInfo.name`` too.
+    ACP_BACKEND_KIMI: SelfServedLaunch(
+        label="Kimi Code CLI",
+        binary="kimi",
+        acp_args=("acp",),
+        bin_env_var="KIMI_BIN",
+        install_command=f"npm i -g @moonshot-ai/kimi-code@{KIMI_VERIFIED_VERSION}",
+        protocol_version=1,
+        missing_hint=(
+            "No adapter package is needed: this harness serves ACP itself. The "
+            "archived Python kimi-cli installs a command with the same name and is "
+            "not this harness."
+        ),
+        # The folder Kimi Code's own installer puts the binary in
+        # (``~/.kimi-code/bin/kimi``, seen on a host that ran it).
+        install_dirs=("{home}/.kimi-code/bin",),
     ),
     ACP_BACKEND_MIMOCODE: SelfServedLaunch(
         label="MiMo Code",

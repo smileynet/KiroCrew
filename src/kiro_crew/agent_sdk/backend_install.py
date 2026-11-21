@@ -49,6 +49,7 @@ from kiro_crew.agent_sdk.backends import (
     ACP_BACKEND_CLAUDE,
     ACP_BACKEND_CODEX,
     ACP_BACKEND_KAS,
+    ACP_BACKEND_KIMI,
     ACP_BACKEND_KIRO,
     ACP_BACKEND_PI,
     ACP_BACKEND_PROCESS_NAMES,
@@ -56,6 +57,7 @@ from kiro_crew.agent_sdk.backends import (
     ACP_BACKENDS_KNOWN,
     ACP_BACKENDS_SELF_SERVED_ACP,
     COPILOT_VERIFIED_VERSION,
+    KIMI_VERIFIED_VERSION,
     POLICY_ID_BY_BACKEND,
     STRANDS_VERIFIED_VERSION,
     host_unservable_reason,
@@ -389,7 +391,10 @@ def _probe_self_served(backend: str) -> BackendInstallState:
                 backend,
                 policy_id,
                 MISSING,
-                (f"{launch.binary} {COPILOT_VERIFIED_VERSION}",),
+                (
+                    f"{launch.binary} "
+                    f"{KIMI_VERIFIED_VERSION if backend == ACP_BACKEND_KIMI else COPILOT_VERIFIED_VERSION}",
+                ),
                 acp_driver.self_served_install_command(backend),
                 found_version=found,
             )

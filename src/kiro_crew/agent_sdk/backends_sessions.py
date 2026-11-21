@@ -26,6 +26,7 @@ from kiro_crew.agent_sdk.backends import (
     ACP_BACKEND_DEEPSEEK,
     ACP_BACKEND_GOOSE,
     ACP_BACKEND_KAS,
+    ACP_BACKEND_KIMI,
     ACP_BACKEND_KIRO,
     ACP_BACKEND_MIMOCODE,
     ACP_BACKEND_OPENCODE,
@@ -250,6 +251,8 @@ ACP_BACKENDS_ACP_RUNTIME = frozenset({ACP_BACKEND_KIRO, ACP_BACKEND_KAS, ACP_BAC
 # its own identity the way kas and codex do today -- the exact bug this fact
 # exists to let a caller avoid.
 # mimocode is a member: ``MimoCodeLaunch`` is its entry in ``_PROCESS_ADAPTERS``.
+# kimi is a member for the same code fact (``KimiLaunch``); that makes it spawnable, not
+# selectable (``NOT_SHIPPED_SELECTABLE``).
 ACP_BACKENDS_ACP_CLIENT_SPAWNABLE = frozenset(
     {
         ACP_BACKEND_KIRO,
@@ -262,6 +265,7 @@ ACP_BACKENDS_ACP_CLIENT_SPAWNABLE = frozenset(
         ACP_BACKEND_COPILOT,
         ACP_BACKEND_STRANDS,
         ACP_BACKEND_ANTIGRAVITY,
+        ACP_BACKEND_KIMI,
     }
 )
 

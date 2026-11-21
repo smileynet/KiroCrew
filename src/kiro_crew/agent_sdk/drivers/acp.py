@@ -1289,12 +1289,25 @@ def self_served_wrong_version(backend: str) -> str:
 
     ``""`` when the binary does not resolve, when its release cannot be read, when it
     is the verified one, and for every harness with no single verified release. Only
-    Copilot CLI has one (``COPILOT_VERIFIED_VERSION``): a session on any other release
-    is refused at the handshake, so an install row that only looked for the binary
-    would call a harness ready that refuses every chat. Read from the install's own
-    manifest, never by running it.
+    Copilot CLI (``COPILOT_VERIFIED_VERSION``) and Kimi Code CLI (``KIMI_VERIFIED_VERSION``)
+    have one: a session on any other release is refused at the handshake, so an install
+    row that only looked for the binary would call a harness ready that refuses every
+    chat. Read from the install's own manifest, never by running it.
     """
-    from kiro_crew.agent_sdk.backends import ACP_BACKEND_COPILOT, COPILOT_VERIFIED_VERSION
+    from kiro_crew.agent_sdk.backends import (
+        ACP_BACKEND_COPILOT,
+        ACP_BACKEND_KIMI,
+        COPILOT_VERIFIED_VERSION,
+        KIMI_VERIFIED_VERSION,
+    )
+
+    if backend == ACP_BACKEND_KIMI:
+        from kiro_crew.acp.client import _resolve_self_served_bin
+        from kiro_crew.acp.harness.kimi import kimi_installed_version
+
+        binary, _searched_path = _resolve_self_served_bin(backend)
+        version = kimi_installed_version(binary) if binary else ""
+        return version if version and version != KIMI_VERIFIED_VERSION else ""
 
     if backend == ACP_BACKEND_COPILOT:
         from kiro_crew.acp.client import _resolve_self_served_bin

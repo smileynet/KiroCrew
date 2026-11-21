@@ -80,6 +80,7 @@ from kiro_crew.acp.types import (
     ACP_BACKEND_CLAUDE,
     ACP_BACKEND_DEEPSEEK,
     ACP_BACKEND_GOOSE,
+    ACP_BACKEND_KIMI,
     ACP_BACKEND_MIMOCODE,
     ACP_BACKEND_OPENCODE,
     ACP_BACKEND_PI,
@@ -190,6 +191,9 @@ PROTOCOL_VERSION_GOOSE = launch_for(ACP_BACKEND_GOOSE).protocol_version
 PROTOCOL_VERSION_DEEPSEEK = launch_for(ACP_BACKEND_DEEPSEEK).protocol_version
 #: Google Antigravity's standalone ACP server answers with protocol version 1.
 PROTOCOL_VERSION_ANTIGRAVITY = 1
+#: Kimi Code CLI's ``kimi acp`` answers ``initialize`` with protocol version 1 (observed
+#: on 2.7.2); its own literal for the same H10 reason as the rows above.
+PROTOCOL_VERSION_KIMI = launch_for(ACP_BACKEND_KIMI).protocol_version
 #: Handshake dialect per harness. A TABLE, not an if-chain: the handshake runs on
 #: the construction path kiro-cli shares with every adapter, and harness-parity H13
 #: keeps that path free of conditionals added in service of one. A harness added

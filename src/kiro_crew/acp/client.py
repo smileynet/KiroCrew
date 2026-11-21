@@ -151,6 +151,7 @@ from kiro_crew.acp.client_deepseek import DeepseekAcpClient  # noqa: F401
 from kiro_crew.acp.client_goose import GooseAcpClient  # noqa: F401
 from kiro_crew.acp.client_goose_session import GOOSE_VERIFIED_VERSION_PREFIX  # noqa: F401
 from kiro_crew.acp.client_goose_session import _goose_versions_noted  # noqa: F401
+from kiro_crew.acp.client_kimi import KimiAcpClient  # noqa: F401
 from kiro_crew.acp.client_lifecycle import _SUPPRESSED_STDERR_MARKERS  # noqa: F401
 from kiro_crew.acp.client_lifecycle import _T  # noqa: F401
 from kiro_crew.acp.client_mimocode import MimocodeAcpClient  # noqa: F401
@@ -195,6 +196,7 @@ from kiro_crew.acp.client_start import PROTOCOL_VERSION_ANTIGRAVITY  # noqa: F40
 from kiro_crew.acp.client_start import PROTOCOL_VERSION_CLAUDE  # noqa: F401
 from kiro_crew.acp.client_start import PROTOCOL_VERSION_DEEPSEEK  # noqa: F401
 from kiro_crew.acp.client_start import PROTOCOL_VERSION_GOOSE  # noqa: F401
+from kiro_crew.acp.client_start import PROTOCOL_VERSION_KIMI  # noqa: F401
 from kiro_crew.acp.client_start import PROTOCOL_VERSION_OPENCODE  # noqa: F401
 from kiro_crew.acp.client_start import PROTOCOL_VERSION_PI  # noqa: F401
 from kiro_crew.acp.client_timeouts import _ACP_RESPAWN_BACKOFF_S  # noqa: F401
@@ -936,6 +938,7 @@ _CLIENT_OWNERS: tuple[str, ...] = (
     "kiro_crew.acp.client_opencode_session",
     "kiro_crew.acp.client_deepseek_session",
     "kiro_crew.acp.client_mimocode_session",
+    "kiro_crew.acp.client_kimi_session",
     "kiro_crew.acp.client_elicitation",
     "kiro_crew.acp.client_antigravity",
     "kiro_crew.acp.client_copilot",
@@ -960,6 +963,7 @@ _CLIENT_OWNERS: tuple[str, ...] = (
     "kiro_crew.acp.client_opencode",
     "kiro_crew.acp.client_deepseek",
     "kiro_crew.acp.client_mimocode",
+    "kiro_crew.acp.client_kimi",
 )
 _MIRROR = _facade_mirror.install(
     sys.modules[__name__],
