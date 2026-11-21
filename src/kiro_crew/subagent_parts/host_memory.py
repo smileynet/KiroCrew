@@ -214,8 +214,12 @@ def _available_memory_gb(*, measured_only: bool = False) -> float:
         • macOS  — reclaimable memory via Mach ``host_statistics64`` (ctypes,
                    in-process, no subprocess); see ``_macos_available_memory_gb``.
                    No cgroups.
-        • Windows — ``GlobalMemoryStatusEx`` through
-                   ``platform_compat.host_available_mib``. No cgroups.
+        • Windows — ``min(ullAvailPhys, ullAvailPageFile)`` from one
+                   ``GlobalMemoryStatusEx`` call, through
+                   ``platform_compat.host_available_mib``: physical available,
+                   capped by this process's commit headroom (not the system-wide
+                   commit figure). Since the commit cap; before it, physical
+                   available alone. No cgroups.
         • other  — no probe yet → ``-1.0`` (fail open).
 
     NOTE (adding a new OS): implement a ``_<os>_available_memory_gb()`` helper

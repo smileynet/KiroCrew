@@ -982,7 +982,9 @@ class AgentConfig:
             "pressure. Advisory only — not enforced. 0 disables the context line, "
             "that macOS case included. Lower this on small-memory hosts / "
             "memory-limited containers (e.g. a 2-4 GB pod) so the advisory only fires "
-            "under genuine pressure.",
+            "under genuine pressure. 'Available' here is per OS: on Linux, MemAvailable (and "
+            "the container's cgroup headroom); on macOS, reclaimable memory; on Windows, "
+            "the smaller of physical available and the process's commit headroom.",
         ),
     )
     resource_critical_gb: float = field(
@@ -995,7 +997,8 @@ class AgentConfig:
             "which on Linux stops the largest Crew tool or test tree at critical memory, or "
             "at tight memory with PSI full avg10 >= 10. 0 disables the critical tier and "
             "turns the memory guard off. When the container's memory limit is at or under "
-            "it, the gateway logs one start-up warning naming the settings to lower.",
+            "it, the gateway logs one start-up warning naming the settings to lower. "
+            "'Available' means the same as for resource_pressure_gb.",
         ),
     )
     admission_gate: bool = field(

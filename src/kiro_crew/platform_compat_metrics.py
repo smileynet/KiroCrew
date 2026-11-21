@@ -1374,7 +1374,10 @@ def host_available_mib() -> int:
         return _macos_available_mib()
     if IS_WINDOWS:
         # A new process must commit what it maps, so free physical RAM is capped
-        # by commit headroom (ullAvailPageFile: commit limit minus commit charge).
+        # by commit headroom. ullAvailPageFile is the most the CURRENT PROCESS can
+        # commit, at or below the system-wide figure (CommitLimit - CommitTotal from
+        # GetPerformanceInfo), not the system-wide figure itself:
+        # https://learn.microsoft.com/en-us/windows/win32/api/sysinfoapi/ns-sysinfoapi-memorystatusex
         # After a successful call the answer is at least 1 MiB: 0 means "unknown"
         # here, and an exhausted host must read as full, not as unmeasured.
         try:

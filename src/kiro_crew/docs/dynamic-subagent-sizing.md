@@ -374,9 +374,15 @@ limit waits even while physical memory is free.
   and passes the spawn-audit guard. The spawn floor reads a tighter sum of the
   same counters (free + purgeable + inactive file-backed pages, the figure
   behind `platform_compat.host_available_mib`), so it does not count memory a
-  new process cannot take without swapping; Windows reads available memory via
-  `GlobalMemoryStatusEx` (through `platform_compat.host_available_mib`) and has
-  no cgroup clamp.
+  new process cannot take without swapping; Windows reads
+  `min(ullAvailPhys, ullAvailPageFile)` from one `GlobalMemoryStatusEx` call
+  (through `platform_compat.host_available_mib`): physical available memory,
+  capped by the calling process's commit headroom. `ullAvailPageFile` is
+  per-process and at or below the system-wide figure (`CommitLimit` minus
+  `CommitTotal` from `GetPerformanceInfo`; see Microsoft's
+  [MEMORYSTATUSEX](https://learn.microsoft.com/en-us/windows/win32/api/sysinfoapi/ns-sysinfoapi-memorystatusex)).
+  The commit cap came with #30998; earlier builds read physical available
+  alone. There is no cgroup clamp.
 - On a platform with no probe yet, or with no usable memory bound, the memory reader
   fails open and the cap falls back to the floor of 3 (`_LEGACY_DEFAULT_MAX`),
   not to the configured ceiling: the floor cannot bound starts it cannot measure.
