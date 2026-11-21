@@ -84,6 +84,8 @@ def approved_write_paths(params: dict[str, Any], cwd: str) -> tuple[str, ...]:
     path, and both carry the text ``Requesting approval to Writing|Editing <path>``. The main
     agent's text path may be relative, so each is resolved against the session *cwd*. A request
     for any other tool, or one that names no path, answers ``()``: its approval pays for no write.
+    So does one whose paths resolve to different files: the person saw one path and a write
+    would land on another, so it fails closed.
     """
     tool_call = params.get("toolCall")
     if not isinstance(tool_call, dict) or tool_call.get("title") not in _WRITE_TITLES:
@@ -99,7 +101,8 @@ def approved_write_paths(params: dict[str, Any], cwd: str) -> tuple[str, ...]:
         match = _TEXT_PATH.match(text) if isinstance(text, str) else None
         if match and match.group(1):
             found.append(match.group(1))
-    return tuple(dict.fromkeys(_resolve(path, cwd) for path in found))
+    resolved = tuple(dict.fromkeys(_resolve(path, cwd) for path in found))
+    return resolved if len(resolved) == 1 else ()
 
 
 class KimiFsGate:
@@ -118,9 +121,19 @@ class KimiFsGate:
         if paths:
             self.pending[request_id] = paths
 
-    def approve(self, request_id: str | int) -> None:
-        for path in self.pending.pop(request_id, ()):
+    def approve(self, request_id: str | int) -> tuple[str, ...]:
+        """Credit the request's paths; the paths credited, for :meth:`undo`."""
+        paths = self.pending.pop(request_id, ())
+        for path in paths:
             self.approved[path] = self.approved.get(path, 0) + 1
+        return paths
+
+    def undo(self, request_id: str | int, paths: tuple[str, ...]) -> None:
+        """Take back what :meth:`approve` credited (the answer was never sent)."""
+        for path in paths:
+            self.spend(path)
+        if paths:
+            self.pending[request_id] = paths
 
     def drop(self, request_id: str | int) -> None:
         self.pending.pop(request_id, None)

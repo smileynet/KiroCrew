@@ -402,17 +402,20 @@ async def approve_tool(
     if withdraw_if is not None or grant_check is not None or capability.applies:
         recheck["before_write"] = before_write
     sent = False
+    credited: tuple[str, ...] = ()
     try:
+        if self.backend == ACP_BACKEND_KIMI:
+            # Recorded BEFORE the answer leaves: Kimi may send its ``fs/write_text_file`` before
+            # this task resumes. Undone below when the answer is not sent.
+            credited = kimi_fs_gate(self).approve(request_id)
         await self._send_response(
             request_id,
             {"outcome": {"outcome": OUTCOME_SELECTED, "optionId": resolved_id}},
             **recheck,
         )
         sent = True
-        if self.backend == ACP_BACKEND_KIMI:
-            # The approval now pays for one ``fs/write_text_file`` of the path it named.
-            kimi_fs_gate(self).approve(request_id)
     except GrantEnded:
+        _undo_kimi_credit(self, request_id, credited)
         # Nothing was written: put the request back exactly as it was.
         if gate_events is not None and gate_event is not None:
             gate_events[request_id] = gate_event
@@ -422,11 +425,20 @@ async def approve_tool(
             self._pi_gate_request_tool[str(request_id)] = pi_gate_tool
         raise
     except permission_floor.ApprovalWithdrawn:
+        _undo_kimi_credit(self, request_id, credited)
         _restore_withdrawn(self, request_id, gate_event, recorded, pi_gate_tool)
+        raise
+    except BaseException:
+        _undo_kimi_credit(self, request_id, credited)
         raise
     finally:
         capability.settle(sent=sent)
     return True
+
+
+def _undo_kimi_credit(client: AcpClient, request_id: str | int, credited: tuple[str, ...]) -> None:
+    if credited:
+        kimi_fs_gate(client).undo(request_id, credited)
 
 
 def _bridged_servers(client: AcpClient) -> tuple[str, ...]:
