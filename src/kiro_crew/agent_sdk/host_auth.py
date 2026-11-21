@@ -1022,10 +1022,9 @@ AGENT_AUTH_DECLARATIONS: Tuple[AgentAuthDeclaration, ...] = (
             "`kimi login`, complete the device-code sign-in, then start a new chat. "
             f"{HOST_TERMINAL_NOTE}"
         ),
-        # TODO(capture): copy the phrase from a live signed-out ``session/prompt`` or
-        # ``session/new`` error (the docs name ``authRequired`` / -32000 but the text
-        # is unobserved). Empty until then: a guessed phrase could turn a transient
-        # failure into a terminal one.
+        # Empty: signed out, 2.7.2 answers ``session/prompt`` with nothing (no -32000,
+        # no error text), so there is no phrase to copy. The client reads the sign-in
+        # from the handshake instead (``harness.kimi.kimi_signed_out``).
         signed_out_signature="",
         host_logout_retires_children=False,
         entitlement_source=ENTITLEMENT_OWN_CREDENTIAL_FILE,

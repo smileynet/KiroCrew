@@ -1,11 +1,11 @@
 """Contract tests for the dormant Kimi Code CLI harness.
 
-The wire facts asserted here (``agentInfo``, the ``mode`` select of ``default``,
-``plan``, ``auto`` and ``yolo``, the advertised command list) were observed on Kimi
-Code CLI 2.7.2 with ``initialize`` and ``session/new`` and are rebuilt below as small
-synthetic frames; there is no ``test/fixtures/acp_frames/kimi/`` corpus yet. Every
-assertion about behaviour the harness was not observed to have is a ``TODO(capture)``
-in the code and an entry in the Kimi worked example of harness-onboarding.md.
+The wire facts asserted here were observed on Kimi Code CLI 2.7.2. The handshake and
+``mode`` ones are rebuilt below as small synthetic frames; the permission request, the
+elicitation, ``session/load``, the signed-out state and the unasked Write are pinned
+against the live corpus in ``test/fixtures/acp_frames/kimi/``. Every assertion about
+behaviour the harness was not observed to have is a ``TODO(capture)`` in the code and
+an entry in the Kimi worked example of harness-onboarding.md.
 """
 
 from __future__ import annotations
@@ -13,6 +13,7 @@ from __future__ import annotations
 import ast
 import inspect
 import json
+import subprocess
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
@@ -22,8 +23,10 @@ from kiro_crew.acp import client_kimi_session
 from kiro_crew.acp import launch as launch_mod
 from kiro_crew.acp.client import PROTOCOL_VERSION_KIMI, AcpClient, KimiAcpClient
 from kiro_crew.acp.harness import kimi as kimi_mod
+from kiro_crew.acp.harness.kimi import KIMI_AGENT_NAME
 from kiro_crew.acp.harness import process_adapter_for
 from kiro_crew.acp.harness.base import SpawnContext
+from kiro_crew.acp.no_model_provider import AcpNoModelProvider
 from kiro_crew.acp.transport_errors import AcpError, AcpToolGateUnroutable
 from kiro_crew.acp.types import PROVIDER_LABEL_BY_BACKEND, JsonRpcMessage
 from kiro_crew.agent_sdk import backend_install, host_auth
@@ -151,6 +154,7 @@ async def test_the_spawn_resolves_the_binary_and_arms_the_unasked_tripwire(
     )
     monkeypatch.setattr(launch_mod, "resolve_self_served_launch", resolved)
     monkeypatch.setattr(launch_mod, "_run_preflight_bounded", AsyncMock(return_value=()))
+    monkeypatch.setattr(kimi_mod, "kimi_node_found", lambda _bin: "")
     client = AcpClient(work_dir=tmp_path, acp_backend=KIMI)
     ctx = SpawnContext.__new__(SpawnContext)
     object.__setattr__(ctx, "session", client)
@@ -336,7 +340,18 @@ _REFUSED = (
     "/some-command-this-build-has-never-seen",
 )
 _PASSED = ("/compact", "/status", "/usage", "/mcp", "/tasks", "/help", "/COMPACT now")
-_NOT_COMMANDS = ("hello", "", "/yolo.", "/yolo/x", "//yolo", "/ yolo", "read /etc/hosts")
+# "Reply ok.\n/status" was sent live: Kimi 2.7.2 answered it as model text, not as a
+# command, so a slash after other text needs no refusal.
+_NOT_COMMANDS = (
+    "hello",
+    "",
+    "/yolo.",
+    "/yolo/x",
+    "//yolo",
+    "/ yolo",
+    "read /etc/hosts",
+    "Reply ok.\n/yolo",
+)
 
 
 @pytest.mark.parametrize("text", _REFUSED)
@@ -404,7 +419,9 @@ def test_the_auth_declaration() -> None:
     assert declaration.host_logout_retires_children is False
     assert "kimi login" in declaration.sign_in_remedy
     assert "kimi login" in declaration.signed_out_message
-    # TODO(capture): pinned empty until a signed-out error is captured.
+    # Signed out, Kimi 2.7.2 answers ``session/prompt`` with nothing at all (no error
+    # text exists to copy), so the signature stays empty; ``kimi_signed_out`` reads the
+    # handshake instead.
     assert declaration.signed_out_signature == ""
 
 
@@ -583,3 +600,162 @@ def test_the_probe_reports_a_missing_binary_with_the_install_command(monkeypatch
     assert state.installed == backend_install.MISSING
     assert state.missing_components == ("kimi",)
     assert state.install_command == "npm i -g @moonshot-ai/kimi-code@2.7.2"
+
+
+# ── live corpus (test/fixtures/acp_frames/kimi) ──────────────────────────────
+
+_CORPUS = Path(__file__).parent / "fixtures" / "acp_frames" / "kimi"
+
+
+def _corpus(name: str) -> list[dict]:
+    lines = (_CORPUS / f"{name}.jsonl").read_text().splitlines()
+    return [json.loads(line) for line in lines[1:]]
+
+
+def _updates(frames: list[dict], kind: str) -> list[dict]:
+    return [
+        f["params"]["update"]
+        for f in frames
+        if f.get("method") == "session/update" and f["params"]["update"]["sessionUpdate"] == kind
+    ]
+
+
+def _session_new(name: str) -> dict:
+    return next(f["result"] for f in _corpus(name) if "configOptions" in f.get("result", {}))
+
+
+def test_the_handshake_corpus_pins_the_terminal_auth_method_and_the_mode_spellings() -> None:
+    frames = _corpus("handshake-live")
+    init = frames[0]["result"]
+    assert init["agentInfo"] == {"name": KIMI_AGENT_NAME, "version": KIMI_VERIFIED_VERSION}
+    assert [(m["id"], m["type"]) for m in init["authMethods"]] == [("login", "terminal")]
+    new = _session_new("handshake-live")
+    assert [m["id"] for m in new["modes"]["availableModes"]] == ["default", "plan", "auto", "yolo"]
+    assert new["modes"]["currentModeId"] == "default"
+    # A mode change is announced twice, with these spellings, and answered with ``{}``.
+    assert _updates(frames, "current_mode_update")[0]["currentModeId"] == "plan"
+    assert _updates(frames, "config_option_update")
+    assert any(f.get("result") == {} for f in frames)
+    assert any(f.get("error", {}).get("code") == -32602 for f in frames)
+
+
+def test_the_permission_request_has_three_options_and_a_bare_tool_call() -> None:
+    for name in ("turn-live-permission-bash", "turn-live-permission-mcp"):
+        request = next(f for f in _corpus(name) if f.get("method") == "session/request_permission")
+        assert {o["optionId"]: o["kind"] for o in request["params"]["options"]} == {
+            "approve_once": "allow_once",
+            "approve_always": "allow_always",
+            "reject": "reject_once",
+        }
+        # No ``kind``, ``rawInput`` or ``status`` here: those ride the earlier updates.
+        assert set(request["params"]["toolCall"]) == {"toolCallId", "title", "content"}
+
+
+def test_a_question_arrives_as_a_form_elicitation() -> None:
+    request = next(
+        f for f in _corpus("turn-live-elicitation") if f.get("method") == "elicitation/create"
+    )
+    assert request["params"]["mode"] == "form"
+    assert request["params"]["requestedSchema"]["required"] == ["q0"]
+
+
+def test_session_load_answers_without_a_session_id_after_replaying_history() -> None:
+    frames = _corpus("session-load-live")
+    result = frames[-1]["result"]
+    assert "sessionId" not in result and set(result) == {"configOptions", "modes"}
+    assert _updates(frames[:-1], "user_message_chunk") and _updates(frames[:-1], "tool_call")
+
+
+def test_the_unasked_write_is_pinned_so_a_change_in_it_is_seen() -> None:
+    frames = _corpus("turn-live-write-unasked")
+    assert not any(f.get("method") == "session/request_permission" for f in frames)
+    assert _updates(frames, "tool_call")[0]["title"] == "Write"
+    assert _updates(frames, "tool_call_update")[-1]["status"] == "completed"
+
+
+def test_signed_out_is_read_from_the_thinking_select_not_from_an_error() -> None:
+    assert kimi_mod.kimi_signed_out(_session_new("signed-out-live")["configOptions"]) is True
+    assert kimi_mod.kimi_signed_out(_session_new("handshake-live")["configOptions"]) is False
+    assert kimi_mod.kimi_signed_out(None) is False
+    assert kimi_mod.kimi_signed_out([]) is False
+
+
+def test_a_signed_out_session_is_refused_before_its_first_prompt() -> None:
+    client = AcpClient(acp_backend=KIMI)
+    client._acp_config_options = _session_new("handshake-live")["configOptions"]
+    client._refuse_harness_default_model()
+    client._acp_config_options = _session_new("signed-out-live")["configOptions"]
+    with pytest.raises(AcpNoModelProvider) as raised:
+        client._refuse_harness_default_model()
+    assert "kimi login" in str(raised.value)
+
+
+# ── Node.js floor ────────────────────────────────────────────────────────────
+
+
+def _fake_node(monkeypatch, version: str | None) -> None:
+    monkeypatch.setattr(
+        kimi_mod.shutil, "which", lambda _name: None if version is None else "/n/node"
+    )
+    monkeypatch.setattr(
+        kimi_mod.subprocess,
+        "run",
+        lambda *_a, **_k: subprocess.CompletedProcess([], 0, stdout=f"{version}\n"),
+    )
+
+
+@pytest.mark.parametrize(
+    ("version", "expected"),
+    [
+        ("v20.20.2", "v20.20.2"),
+        ("v22.18.9", "v22.18.9"),
+        ("v22.19.0", ""),
+        ("v24.1.0", ""),
+        ("odd", ""),
+    ],
+)
+def test_a_node_below_the_floor_is_named(tmp_path, monkeypatch, version, expected) -> None:
+    _fake_node(monkeypatch, version)
+    assert kimi_mod.kimi_node_found(str(_npm_install(tmp_path, "2.7.2"))) == expected
+
+
+def test_no_node_on_path_is_named_and_a_build_without_a_manifest_is_not_judged(
+    tmp_path, monkeypatch
+) -> None:
+    _fake_node(monkeypatch, None)
+    assert kimi_mod.kimi_node_found(str(_npm_install(tmp_path, "2.7.2"))) == "none"
+    assert kimi_mod.kimi_node_found(str(tmp_path / "standalone-kimi")) == ""
+
+
+def test_the_node_remedy_names_the_version_found_and_the_floor() -> None:
+    assert "22.19.0" in kimi_mod.kimi_node_message("v20.20.2")
+    assert "v20.20.2" in kimi_mod.kimi_node_message("v20.20.2")
+    assert "no node on PATH" in kimi_mod.kimi_node_message("none")
+
+
+@pytest.mark.asyncio
+async def test_an_old_node_refuses_the_spawn_with_the_node_remedy(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(
+        launch_mod,
+        "resolve_self_served_launch",
+        AsyncMock(return_value=("/opt/bin/kimi", ["/opt/bin/kimi", "acp"], "kimi acp", "kimi")),
+    )
+    monkeypatch.setattr(kimi_mod, "kimi_node_found", lambda _bin: "v20.20.2")
+    client = AcpClient(work_dir=tmp_path, acp_backend=KIMI)
+    ctx = SpawnContext.__new__(SpawnContext)
+    object.__setattr__(ctx, "session", client)
+    object.__setattr__(ctx, "work_dir", tmp_path)
+    object.__setattr__(ctx, "sandbox_mode", "auto")
+    with pytest.raises(AcpToolGateUnroutable, match="v20.20.2") as raised:
+        await kimi_mod.KimiLaunch().resolve_spawn(ctx)
+    assert raised.value.transient is False and raised.value.user_worded is True
+
+
+def test_the_probe_reports_an_old_node_as_missing_with_the_version_found(monkeypatch) -> None:
+    monkeypatch.setattr(acp_driver, "self_served_resolves", lambda backend: True)
+    monkeypatch.setattr(acp_driver, "self_served_wrong_version", lambda backend: "")
+    monkeypatch.setattr(acp_driver, "self_served_old_node", lambda backend: "v20.20.2")
+    state = backend_install._probe_self_served(KIMI)
+    assert state.installed == backend_install.MISSING
+    assert state.missing_components == ("node 22.19",)
+    assert state.found_version == "v20.20.2"

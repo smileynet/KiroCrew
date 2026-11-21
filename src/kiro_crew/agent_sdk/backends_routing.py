@@ -553,10 +553,12 @@ ACP_BACKEND_PERMISSION_CONFIG: dict = {
     # description string on the wire; the docs call it Always Ask). ``auto`` and
     # ``yolo`` are the two that approve tools without asking. Crew writes the pin
     # through ``session/set_config_option`` and never calls ``session/set_mode``.
-    # TODO(capture): the final captures report must confirm (1) a permission request
-    # arrives for a shell call in ``default``, (2) the ``config_option_update`` and
-    # ``current_mode_update`` spellings after a mode change, and (3) that reads run
-    # unasked or ask; until then the harness stays dormant.
+    # Captured on 2.7.2: (1) a Bash or MCP call in ``default`` asks (``approve_once``,
+    # ``approve_always``, ``reject``); (2) a mode change is announced as
+    # ``current_mode_update`` plus ``config_option_update``; (3) Read and a Write inside
+    # the cwd run UNASKED, so the unasked-tool tripwire ends a session that does either.
+    # A forced-ask config for Write/Edit was shown to work (reports/kimi-harness-capture-
+    # round.md); whether to ship it is open, so the harness stays dormant.
     ACP_BACKEND_KIMI: ("mode", "default"),
 }
 
@@ -702,9 +704,9 @@ ACP_BACKEND_PROMPT_COMMAND_ALLOWLIST: dict = {
     # start a prompt. ``/yolo`` and ``/auto`` (mode switches), ``/login``, ``/logout``,
     # ``/goal`` and every skill command (``mcp-config`` drives MCP OAuth login) are
     # refused before the wire, as is any command this build has never seen.
-    # TODO(capture): confirm over ACP that each listed command only reads, and which
-    # commands a ``session/prompt`` actually runs; the TUI's ``/yolo`` and ``/auto``
-    # are not in the ACP list, and nothing observed says a prompt cannot reach them.
+    # Observed: ``/compact`` runs as a command; a slash AFTER other text ("ok.\n/status")
+    # is read as model text, not a command. TODO(capture): that each listed command
+    # only reads, and whether a leading ``/yolo`` or ``/auto`` runs (never sent live).
     ACP_BACKEND_KIMI: frozenset({"compact", "help", "mcp", "status", "tasks", "usage"}),
     ACP_BACKEND_COPILOT: frozenset(
         {
