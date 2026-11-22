@@ -1,0 +1,2 @@
++5
+Kimi Code CLI harness: the Crew-owned kimi-home leaf and its comment in security/paths_lists.py (a credential home the agent file tools must not open).
