@@ -606,6 +606,68 @@ def _sandbox_preflight(backend: str, mode: str) -> tuple[str, ...]:
         raise AcpToolGateUnroutable(str(exc)) from None
 
 
+def hidden_workdir_message(workdir: str, masked_by: str) -> str:
+    """The refusal for a working directory the sandbox hides, naming both paths."""
+    where = f"inside {masked_by}, which" if masked_by else "inside a path that"
+    return (
+        f"This chat's working folder {workdir} is {where} Kiro Crew's sandbox hides from "
+        "the agent, so the agent could not even start there. Pick a working folder outside "
+        "Kiro Crew's data folder (for example a project under your home folder), then "
+        "start a new chat."
+    )
+
+
+def workspace_mask_issue(
+    workspace: str,
+    mode: str,
+    hidden: tuple[str, ...],
+    windows: tuple[str, ...],
+    expose: tuple[str, ...],
+) -> str:
+    """The masked path that hides *workspace* from this spawn, or ``""``. Blocking.
+
+    Plans the spawn the way :func:`launch` is about to wrap it (same mask, private
+    windows and re-exposed files) and reports the mask that contains the working
+    directory under every spelling it has. A child started inside a hidden directory
+    cannot ``getcwd`` (Node dies at start with ``uv_cwd`` EPERM), so this is the
+    refusal that names the cause before the spawn. Empty when no OS sandbox backend
+    applies: the floor refuses that case on its own.
+    shortcut: plans once more than the wrap does; fold into the wrap if its plan ever
+    exposes the masks before the argv is built.
+    """
+    from kiro_crew import sandbox, sandbox_plan
+
+    detected = sandbox.detect_backend()
+    if detected == "none":
+        return ""
+    backend = (
+        sandbox_plan.BACKEND_NAMESPACE if detected == "namespace" else sandbox_plan.BACKEND_SEATBELT
+    )
+    plan = sandbox._spawn_plan(
+        backend,
+        mode,
+        strip_python_env=True,
+        extra_hidden_dirs=hidden,
+        extra_private_dirs=windows,
+        extra_expose_files=expose,
+    )
+    spellings = tuple(dict.fromkeys((os.path.abspath(workspace), os.path.realpath(workspace))))
+
+    def _within(path: str, root: str) -> bool:
+        root = os.path.normpath(root)
+        return path == root or path.startswith(root.rstrip(os.sep) + os.sep)
+
+    for mask in plan.masks:
+        if mask.cancelled:
+            continue
+        for spelling in spellings:
+            # Seatbelt records a window on its mask; the namespace plan keeps them on the plan.
+            opened = (*mask.windows, *plan.windows)
+            if _within(spelling, mask.path) and not any(_within(spelling, w) for w in opened):
+                return mask.path
+    return ""
+
+
 async def _run_preflight_bounded(
     preflight: Callable[[str, str], tuple[str, ...]], backend: str, mode: str
 ) -> tuple[str, ...]:
@@ -971,6 +1033,10 @@ class LaunchRequest:
     #: More windows into the masked scratch root for this process alone: the
     #: runtime's private-state directory.
     extra_private_dirs: tuple[str, ...] = ()
+    #: Refuse the spawn, before it starts, when the sandbox hides the working directory.
+    #: Opt-in per harness (a Kimi child dies at start on ``uv_cwd`` EPERM); a harness
+    #: that never reported the fault keeps its spawn arguments unchanged.
+    refuse_masked_workdir: bool = False
     internal_sandbox: bool = False
     pod_home_remap: bool = False
     #: The runtime allocates scratch through its guarded hop; the client never has.
@@ -1150,6 +1216,21 @@ async def launch(host: LaunchHost, request: LaunchRequest, tools: LaunchTools) -
     if host._shared_scratch is not None:
         scratch_window = (*scratch_window, str(host._shared_scratch))
     scratch_window = (*scratch_window, *request.extra_private_dirs)
+    if request.refuse_masked_workdir and host._spawn_work_dir:
+        masked_by = await asyncio.to_thread(
+            workspace_mask_issue,
+            host._spawn_work_dir,
+            request.sandbox_mode,
+            tuple(request.extra_hidden_dirs),
+            scratch_window,
+            tuple(request.extra_expose_files),
+        )
+        if masked_by:
+            raise AcpToolGateUnroutable(
+                hidden_workdir_message(host._spawn_work_dir, masked_by),
+                transient=False,
+                user_worded=True,
+            )
     # Resolve the SSH_AUTH_SOCK forward OFF the event loop (the governance
     # floor and the consent leaf are filesystem reads) ONCE, then pass the
     # resolved boolean into the sandbox wrap below, so nothing reads config

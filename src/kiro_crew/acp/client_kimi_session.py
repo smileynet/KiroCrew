@@ -22,7 +22,7 @@ from typing import TYPE_CHECKING
 from kiro_crew.acp.harness.kimi import (
     KIMI_AGENT_NAME,
     kimi_signed_out,
-    kimi_signed_out_message,
+    kimi_signed_out_refusal,
 )
 from kiro_crew.acp.no_model_provider import AcpNoModelProvider
 from kiro_crew.acp.transport_errors import AcpToolGateUnroutable
@@ -70,5 +70,6 @@ def _refuse_harness_default_model(self: KimiAcpClient) -> None:
     a respawn reads the same missing sign-in.
     """
     if kimi_signed_out(self._acp_config_options):
-        # The exact command for Crew's own home, which the static declaration cannot spell.
-        raise AcpNoModelProvider(kimi_signed_out_message())
+        # The exact command for Crew's own home, which the static declaration cannot spell,
+        # or the unreadable-home cause when the gateway itself sees a sign-in.
+        raise AcpNoModelProvider(kimi_signed_out_refusal())

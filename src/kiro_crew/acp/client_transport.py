@@ -25,6 +25,7 @@ import asyncio
 import functools
 import inspect
 import logging
+import re
 import time
 from contextlib import aclosing
 from typing import TYPE_CHECKING, Any, AsyncGenerator, Awaitable, Callable, TypeVar
@@ -91,6 +92,8 @@ if TYPE_CHECKING:
     from kiro_crew.acp.client import AcpClient
 
 #: The client's own logger: this code logged under that name before the split.
+_HIDDEN_CWD_STDERR = re.compile(r"EPERM.*uv_cwd|uv_cwd.*EPERM", re.IGNORECASE)
+
 logger = logging.getLogger("kiro_crew.acp.client")
 
 _R = TypeVar("_R")
@@ -851,6 +854,17 @@ async def _read_message(
                 )
                 detail = f" — {stderr_tail}" if stderr_tail else ""
                 code = self._process.returncode
+                # Backstop for a spawn the preflight did not cover: Node's ``uv_cwd`` EPERM
+                # is the child failing to enter a working directory the sandbox hides.
+                if any(_HIDDEN_CWD_STDERR.search(line) for line in self._stderr_lines):
+                    from kiro_crew.acp.launch import hidden_workdir_message
+                    from kiro_crew.acp.transport_errors import AcpToolGateUnroutable
+
+                    raise AcpToolGateUnroutable(
+                        hidden_workdir_message(getattr(self, "_spawn_work_dir", "") or "", ""),
+                        transient=False,
+                        user_worded=True,
+                    )
                 origin = _exit_origin(code, self._kill_sent)
                 raise AcpError(f"ACP process exited (code={code}{origin}){detail}")
             await asyncio.sleep(0.1)

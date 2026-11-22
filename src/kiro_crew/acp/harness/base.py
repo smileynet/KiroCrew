@@ -336,6 +336,18 @@ class SpawnPlan:
     hides, or it re-exposes something nothing denied.
     """
 
+    extra_private_dirs: tuple[str, ...] = ()
+    """The spawn's own directories to re-expose read-write inside a masked tree.
+
+    For a harness that runs out of a Crew-owned directory (Kimi's ``kimi-home``) which
+    can sit under a masked path when the data home is relocated. Each entry only ever
+    narrows a mask that already hides a parent: a window under nothing hidden is
+    ignored by the sandbox planner.
+    """
+
+    refuse_masked_workdir: bool = False
+    """Refuse the spawn, before it starts, when the sandbox hides the working directory."""
+
     private_state_env: str | None = None
     """Environment variable this host needs pointed at a per-process directory.
 

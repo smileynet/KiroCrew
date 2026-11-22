@@ -521,6 +521,8 @@ async def _spawn(self: AcpClient) -> None:
             agent_env=self._agent_env_snapshot,
             extra_hidden_dirs=plan.extra_hidden_dirs,
             extra_expose_files=plan.extra_expose_files,
+            extra_private_dirs=plan.extra_private_dirs,
+            refuse_masked_workdir=plan.refuse_masked_workdir,
             internal_sandbox=self.backend in ACP_BACKENDS_INTERNAL_SANDBOX,
             pod_home_remap=self.backend in ACP_BACKENDS_POD_HOME_REMAP,
         ),

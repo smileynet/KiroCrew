@@ -891,7 +891,11 @@ async def _spawn_admitted(self: AcpRuntime) -> None:
             # credential homes.
             extra_hidden_dirs=plan.extra_hidden_dirs,
             extra_expose_files=plan.extra_expose_files,
-            extra_private_dirs=(str(private_state_dir),) if private_state_dir is not None else (),
+            extra_private_dirs=(
+                *plan.extra_private_dirs,
+                *((str(private_state_dir),) if private_state_dir is not None else ()),
+            ),
+            refuse_masked_workdir=plan.refuse_masked_workdir,
             internal_sandbox=internal_sandbox,
             pod_home_remap=self._harness.pod_home_remap,
             guard_scratch_hops=True,

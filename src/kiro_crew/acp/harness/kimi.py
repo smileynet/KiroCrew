@@ -55,6 +55,7 @@ from kiro_crew.acp.transport_errors import AcpToolGateUnroutable
 from kiro_crew.agent_sdk.backends import ACP_BACKEND_KIMI
 from kiro_crew.agent_sdk.tool_gate import KIMI_HOME_LEAF
 from kiro_crew.config.paths import config_dir
+from kiro_crew.sandbox import crew_home_visible_spellings
 
 __all__ = [
     "KIMI_AGENT_NAME",
@@ -71,6 +72,8 @@ __all__ = [
     "kimi_repo_config_issue",
     "kimi_signed_in",
     "kimi_signed_out",
+    "kimi_home_unreadable_message",
+    "kimi_signed_out_refusal",
     "kimi_signed_out_message",
     "prepare_kimi_home",
     "render_kimi_config",
@@ -401,6 +404,9 @@ def kimi_signed_in(home: Path) -> bool:
             entry.is_file() and not entry.is_symlink() and entry.suffix == ".json"
             for entry in (home / "credentials").iterdir()
         )
+    except PermissionError:
+        # An unreadable home is not a signed-out one; the caller names which it is.
+        raise
     except OSError:
         return False
 
@@ -414,6 +420,37 @@ def kimi_signed_out_message(home: Path | str | None = None) -> str:
         "home with its own sign-in, so your own kimi login is not used (sharing one would "
         "make the two copies sign each other out). In a terminal on the gateway host run "
         f"{commands}, complete the device-code sign-in, then start a new chat."
+    )
+
+
+def kimi_signed_out_refusal(home: Path | None = None) -> str:
+    """The refusal for a handshake that reports Kimi signed out. Blocking (one directory read).
+
+    Kimi shows the signed-out UI both when its home holds no sign-in and when it cannot
+    read the home it was given. Crew reads the same home from outside the sandbox before
+    the spawn, so a sign-in the gateway can see that the child cannot means the home is
+    hidden from the child, and telling the person to sign in again would not help.
+    """
+    home = home or kimi_home_dir()
+    try:
+        if not kimi_signed_in(home):
+            return kimi_signed_out_message(home)
+    except OSError:
+        return kimi_home_unreadable_message(home)
+    return (
+        f"Kimi Code CLI reports it is not signed in, but Kiro Crew's Kimi home {home} holds "
+        "a sign-in. The Kimi process most likely cannot read that folder, because Kiro Crew's "
+        "sandbox hides the path from it (a data folder moved under a hidden parent). Move the "
+        "Kiro Crew data folder out from under it, then start a new chat."
+    )
+
+
+def kimi_home_unreadable_message(home: Path | str) -> str:
+    """The refusal for a Kimi home this process may not read: not a sign-in problem."""
+    return (
+        f"Kiro Crew cannot read its own Kimi home {home}, so it cannot tell whether Kimi is "
+        "signed in. Check that this folder and the Kiro Crew data folder above it are readable "
+        "by the gateway (and not hidden by a sandbox it runs in), then start a new chat."
     )
 
 
@@ -434,7 +471,13 @@ def prepare_kimi_home() -> str:
     home = kimi_home_dir()
     home.mkdir(mode=0o700, parents=True, exist_ok=True)
     os.chmod(home, 0o700)
-    if not kimi_signed_in(home):
+    try:
+        signed_in = kimi_signed_in(home)
+    except PermissionError:
+        raise AcpToolGateUnroutable(
+            kimi_home_unreadable_message(home), transient=False, user_worded=True
+        ) from None
+    if not signed_in:
         raise AcpToolGateUnroutable(
             kimi_signed_out_message(home), transient=False, user_worded=True
         )
@@ -566,6 +609,8 @@ class KimiLaunch(ProcessAdapter):
             stderr_label=stderr_label,
             extra_hidden_dirs=hidden,
             extra_expose_files=acp_tool_gate.adapter_expose_files(self.backend, hidden),
+            extra_private_dirs=await asyncio.to_thread(crew_home_visible_spellings, self._home),
+            refuse_masked_workdir=True,
         )
 
     def apply_spawn_env(self, env: dict[str, str], *, spawned_binary: str | None = None) -> None:
