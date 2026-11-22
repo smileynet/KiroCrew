@@ -371,7 +371,6 @@ HARNESS_UNASKED_TOOL_IDS: dict[str, frozenset[str]] = {
             "CronList",
             "AskUserQuestion",
             "ExitPlanMode",
-            "Skill",
             "select_tools",
             "GetGoal",
         }

@@ -106,10 +106,12 @@ _MANIFEST_SEARCH_DEPTH = 3
 #: sees them and Kimi refuses them at execution. Each either reaches the network
 #: (``WebSearch``, ``FetchURL``), reads media or any path without an ask rule that can fence it
 #: (``ReadMediaFile``, ``Grep``, ``Glob``: their rule subject is the search pattern, not the
-#: path, and they run unasked), or adds a tool Crew did not mount (``mcp__*``). ``Bash`` stays
+#: path, and they run unasked), or adds a tool Crew did not mount (``mcp__*``), or puts text from a skill folder in the
+#: model's context with no ask (``Skill``; its builtin ``update-config`` and ``mcp-config`` skills
+#: also coach edits Crew denies). ``Bash`` stays
 #: and asks, so a search still goes through the person. Source: ``reports/kimi-levers-source.md``
 #: section 10, read fencing choice A; live proof for the first four in ``kimi-levers-acp.md``.
-KIMI_DISABLED_TOOLS = ("WebSearch", "FetchURL", "ReadMediaFile", "mcp__*", "Grep", "Glob")
+KIMI_DISABLED_TOOLS = ("WebSearch", "FetchURL", "ReadMediaFile", "mcp__*", "Grep", "Glob", "Skill")
 
 #: The top-level keys of the home's previous ``config.toml`` that survive Crew's rewrite: what
 #: ``kimi login`` writes for its managed provider and models (seen in a signed-in 2.7.2 home).

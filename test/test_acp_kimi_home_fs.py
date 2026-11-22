@@ -152,6 +152,7 @@ def test_the_config_is_the_live_tested_one() -> None:
         "mcp__*",
         "Grep",
         "Glob",
+        "Skill",
     }
 
 
@@ -844,7 +845,6 @@ _KIMI_ROW = {
     "CronList",
     "AskUserQuestion",
     "ExitPlanMode",
-    "Skill",
     "select_tools",
     "GetGoal",
 }
@@ -854,7 +854,7 @@ def test_the_row_holds_read_only_tools_and_nothing_that_writes_runs_or_reaches_o
     assert HARNESS_UNASKED_TOOL_IDS[KIMI] == _KIMI_ROW
     for tool in (
         "Read", "Write", "Edit", "Bash", "TaskStop", "CronCreate", "CronDelete", "WebSearch", "FetchURL",
-        "ReadMediaFile", "Grep", "Glob", "Agent", "AgentSwarm", "NotifyUser", "CreateGoal",
+        "ReadMediaFile", "Grep", "Glob", "Skill", "Agent", "AgentSwarm", "NotifyUser", "CreateGoal",
         "SetGoalBudget", "UpdateGoal",
     ):  # fmt: skip
         assert tool not in HARNESS_UNASKED_TOOL_IDS[KIMI]
