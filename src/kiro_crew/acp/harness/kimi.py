@@ -59,6 +59,7 @@ from kiro_crew.acp.transport_errors import AcpToolGateUnroutable
 from kiro_crew.agent_sdk.backends import ACP_BACKEND_KIMI
 from kiro_crew.agent_sdk.tool_gate import KIMI_HOME_LEAF
 from kiro_crew.config.paths import config_dir
+from kiro_crew.owner_only_files import mkdirs_owner_only
 from kiro_crew.sandbox import crew_home_visible_spellings
 
 __all__ = [
@@ -596,7 +597,7 @@ def prepare_kimi_home() -> str:
     :func:`render_kimi_config` keeps of the previous file (what ``kimi login`` wrote).
     """
     home = kimi_home_dir()
-    home.mkdir(mode=0o700, parents=True, exist_ok=True)
+    mkdirs_owner_only(home)
     os.chmod(home, 0o700)
     try:
         signed_in = kimi_signed_in(home)
