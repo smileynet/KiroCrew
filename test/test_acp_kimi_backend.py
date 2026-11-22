@@ -758,6 +758,19 @@ def test_the_signed_out_refusal_uses_the_sign_in_command_kimi_reports(
     assert "node /k/main.mjs login --region global" in str(raised.value)
 
 
+def test_a_bad_kimi_model_is_a_value_refusal_by_its_text_not_by_code_32602() -> None:
+    from kiro_crew.acp.client import _is_config_value_rejection
+
+    refused = AcpError('Model "nope" is not configured in config.toml.', code=-32603)
+    assert _is_config_value_rejection(refused, "model", KIMI) is True
+    # A bare -32603 stays a fault, and the phrase is Kimi's and the model option's only.
+    assert (
+        _is_config_value_rejection(AcpError("Internal error", code=-32603), "model", KIMI) is False
+    )
+    assert _is_config_value_rejection(refused, "thinking", KIMI) is False
+    assert _is_config_value_rejection(refused, "model", "claude") is False
+
+
 # ── Node.js floor ────────────────────────────────────────────────────────────
 
 

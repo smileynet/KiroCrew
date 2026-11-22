@@ -98,6 +98,10 @@ ACP_BACKENDS_MODEL_VIA_CONFIG_OPTION = frozenset(
 #: other member stays on its default.
 _MODEL_REFUSAL_PHRASE_BY_BACKEND: Mapping[str, str] = {
     ACP_BACKEND_PI: "pi set_model failed:",
+    # Kimi Code CLI 2.7.2 answers a ``model`` write for an id it does not list with
+    # ``-32603 Internal error`` (not -32602), details ``Model "<id>" is not configured in
+    # config.toml.`` (Wave 0 spike X1 S4); a bad ``thinking`` value is the one that is -32602.
+    ACP_BACKEND_KIMI: "is not configured in config.toml",
 }
 
 
