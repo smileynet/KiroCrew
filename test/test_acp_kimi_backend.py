@@ -862,6 +862,59 @@ def test_two_different_commands_for_one_call_are_refused() -> None:
     assert _gate(event).action == "deny"
 
 
+def _command_update(tool_call_id: str, command: str, **extra) -> dict:
+    text = json.dumps({"command": command})
+    return {
+        "toolCallId": tool_call_id,
+        "sessionUpdate": "tool_call_update",
+        "status": "in_progress",
+        "content": [{"type": "content", "content": {"type": "text", "text": text}}],
+        **extra,
+    }
+
+
+def _feed(client, update: dict) -> None:
+    msg = JsonRpcMessage.from_dict(
+        {
+            "jsonrpc": "2.0",
+            "method": "session/update",
+            "params": {"sessionId": "kimi-session-1", "update": update},
+        }
+    )
+    client._extract_tool_event(msg)
+    client._extract_tool_call_update(msg)
+
+
+def test_an_update_for_another_tool_call_does_not_touch_this_commands() -> None:
+    other = _command_update("3:tool-OTHER", "id")
+    client, event = _kimi_bash_ask("echo hi", extra_updates=[other])
+    assert event.shell_command == "echo hi"
+    assert "3:tool-OTHER" not in client._tool_call_params
+
+
+def test_a_late_raw_input_does_not_change_the_event_already_gated() -> None:
+    client, event = _kimi_bash_ask("echo hi")
+    _feed(
+        client,
+        {
+            "toolCallId": "3:tool-1",
+            "sessionUpdate": "tool_call_update",
+            "rawInput": {"command": "id"},
+        },
+    )
+    assert event.shell_command == "echo hi"
+    assert _gate(event).action != "deny" or "could not be verified" not in (
+        _gate(event).reason or ""
+    )
+
+
+def test_a_blank_command_stays_blank_when_the_first_command_comes_again() -> None:
+    client, event = _kimi_bash_ask("echo hi", extra_updates=[_command_update("3:tool-1", "id")])
+    assert event.shell_command is None
+    _feed(client, _command_update("3:tool-1", "echo hi"))
+    assert client._tool_call_params["3:tool-1"]["command"] == ""
+
+
 @pytest.mark.parametrize("text", ["not json", "[1]", '{"cmd":"x"}', '{"command":3}', ""])
 def test_an_unreadable_command_update_recovers_nothing(text: str) -> None:
     update = {"content": [{"type": "content", "content": {"type": "text", "text": text}}]}
