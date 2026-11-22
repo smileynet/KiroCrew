@@ -26,7 +26,9 @@ each decision still waiting on a live capture). Seven things are its own:
   verified release (``acp.client_kimi_session``), and the install probe reads the
   release off the npm manifest.
 * **The child never reports usage to Moonshot and never updates itself mid-run**:
-  ``KIMI_DISABLE_TELEMETRY=1`` and ``KIMI_CODE_NO_AUTO_UPDATE=1`` (:data:`_CHILD_ENV`).
+  ``KIMI_DISABLE_TELEMETRY=1`` and ``KIMI_CODE_NO_AUTO_UPDATE=1`` (:data:`_CHILD_ENV`); its
+  config watcher is off by ``KIMI_CODE_WATCH=0``, and an inherited
+  ``KIMI_CODE_TRUST_WORKSPACE`` is stripped.
 * **A project's own ``.kimi-code/`` directory is refused.** It can hold a local
   config, ``mcp.json``, hooks and permission ``allow`` rules, none of which Crew
   approved (:func:`kimi_repo_config_issue`).
@@ -113,9 +115,19 @@ KIMI_DISABLED_TOOLS = ("WebSearch", "FetchURL", "ReadMediaFile", "mcp__*", "Grep
 #: ``kimi login`` writes for its managed provider and models (seen in a signed-in 2.7.2 home).
 _KEPT_CONFIG_KEYS = frozenset({"default_model", "providers", "models", "thinking"})
 
-#: Set in the child so the session reports nothing to the vendor and a native install does not
-#: swap itself for a new build between runs. ``KIMI_CODE_HOME`` is added per spawn.
-_CHILD_ENV = {"KIMI_DISABLE_TELEMETRY": "1", "KIMI_CODE_NO_AUTO_UPDATE": "1"}
+#: Set in the child so the session reports nothing to the vendor, a native install does not
+#: swap itself for a new build between runs, and the config file watcher stays off even if the
+#: config seed fails (the env var beats ``[watch] enabled``; source-backed, Kimi 2.7.2
+#: ``src/human/utils/watch.ts:511-529``). ``KIMI_CODE_HOME`` is added per spawn.
+_CHILD_ENV = {
+    "KIMI_DISABLE_TELEMETRY": "1",
+    "KIMI_CODE_NO_AUTO_UPDATE": "1",
+    "KIMI_CODE_WATCH": "0",
+}
+
+#: Removed from the child: set, it marks every repo trusted, which would let a project's own
+#: MCP servers and permission rules run without Crew's ask.
+_STRIPPED_ENV = ("KIMI_CODE_TRUST_WORKSPACE",)
 
 #: Characters that would change what a permission pattern built from a path matches.
 _GLOB_CHARS = frozenset("*?[]{}()!\\")
@@ -625,5 +637,7 @@ class KimiLaunch(ProcessAdapter):
                 transient=False,
                 user_worded=True,
             )
+        for name in _STRIPPED_ENV:
+            env.pop(name, None)
         env.update(_CHILD_ENV)
         env["KIMI_CODE_HOME"] = self._home

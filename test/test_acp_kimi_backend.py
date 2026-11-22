@@ -142,16 +142,21 @@ def test_the_client_class_and_adapter_are_registered() -> None:
     assert isinstance(process_adapter_for(KIMI), kimi_mod.KimiLaunch)
 
 
-def test_the_child_env_is_crews_home_no_telemetry_and_no_self_update() -> None:
+def test_the_child_env_is_crews_home_no_telemetry_no_self_update_and_no_watch() -> None:
     launch = kimi_mod.KimiLaunch()
     launch._home = "/crew/kimi-home/abc"
     # An operator's own KIMI_CODE_HOME names where the sign-in was copied FROM; it must not survive.
-    env: dict[str, str] = {"KIMI_CODE_HOME": "/home/operator/.kimi-code"}
+    # An inherited KIMI_CODE_TRUST_WORKSPACE would trust every repo; it must not survive either.
+    env: dict[str, str] = {
+        "KIMI_CODE_HOME": "/home/operator/.kimi-code",
+        "KIMI_CODE_TRUST_WORKSPACE": "1",
+    }
     launch.apply_spawn_env(env)
     assert env == {
         "KIMI_CODE_HOME": "/crew/kimi-home/abc",
         "KIMI_DISABLE_TELEMETRY": "1",
         "KIMI_CODE_NO_AUTO_UPDATE": "1",
+        "KIMI_CODE_WATCH": "0",
     }
 
 

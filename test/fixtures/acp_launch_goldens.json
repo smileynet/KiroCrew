@@ -154,6 +154,7 @@
     "env_added": {
       "KIMI_CODE_HOME": "<kimi-home>",
       "KIMI_CODE_NO_AUTO_UPDATE": "1",
+      "KIMI_CODE_WATCH": "0",
       "KIMI_DISABLE_TELEMETRY": "1",
       "KIROCREW_RUNTIME_PYTHON": "<interpreter>",
       "KIROCREW_SESSION_KEY": "golden-session",
