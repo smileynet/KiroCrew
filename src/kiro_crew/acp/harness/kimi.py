@@ -27,7 +27,9 @@ each decision still waiting on a live capture). Seven things are its own:
   release off the npm manifest.
 * **The child never reports usage to Moonshot and never updates itself mid-run**:
   ``KIMI_DISABLE_TELEMETRY=1`` and ``KIMI_CODE_NO_AUTO_UPDATE=1`` (:data:`_CHILD_ENV`); its
-  config watcher is off by ``KIMI_CODE_WATCH=0``, and an inherited
+  config watcher is off by ``KIMI_CODE_WATCH=0`` (which does NOT stop a rewritten
+  ``config.toml`` reaching the next ``session/new``: Crew's per-spawn re-render and the write deny
+  on the home are the guard), and an inherited
   ``KIMI_CODE_TRUST_WORKSPACE`` is stripped.
 * **A project's own ``.kimi-code/`` directory is refused.** It can hold a local
   config, ``mcp.json`` and permission ``allow`` rules, none of which Crew
@@ -121,8 +123,9 @@ _KEPT_CONFIG_KEYS = frozenset({"default_model", "providers", "models", "thinking
 
 #: Set in the child so the session reports nothing to the vendor, a native install does not
 #: swap itself for a new build between runs, and the config file watcher stays off even if the
-#: config seed fails (the env var beats ``[watch] enabled``; source-backed in Kimi 2.7.2's
-#: ``isWatchEnabled``, not live-proven). ``KIMI_CODE_HOME`` is added per spawn.
+#: config seed fails. Neither this nor ``[watch]`` stops a rewrite reaching the next
+#: ``session/new`` (spike X1 S2); the guard is the per-spawn re-render and the write deny.
+#: ``KIMI_CODE_HOME`` is added per spawn.
 _CHILD_ENV = {
     "KIMI_DISABLE_TELEMETRY": "1",
     "KIMI_CODE_NO_AUTO_UPDATE": "1",
