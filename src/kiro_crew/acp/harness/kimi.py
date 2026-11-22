@@ -66,6 +66,7 @@ __all__ = [
     "KIMI_NPM_PACKAGE",
     "KIMI_PROJECT_DIR",
     "KimiLaunch",
+    "kimi_command_from_update",
     "kimi_installed_version",
     "kimi_node_found",
     "kimi_node_message",
@@ -187,6 +188,30 @@ def kimi_installed_version(kimi_bin: str) -> str:
             version = data.get("version")
             return version.strip() if isinstance(version, str) else ""
     return ""
+
+
+def kimi_command_from_update(update: Mapping[str, object]) -> str:
+    """The shell command Kimi states in a ``tool_call_update``'s content, or ``""``.
+
+    Kimi renders a call's arguments as ONE text block holding a JSON object
+    (``{"command":"echo hi"}``, ``test/fixtures/acp_frames/kimi/turn-live-permission-bash``).
+    Anything else (several blocks, text that is not an object, a missing or non-string
+    ``command``) yields ``""``, so the caller recovers nothing and the call is refused.
+    """
+    content = update.get("content")
+    if not isinstance(content, list) or len(content) != 1:
+        return ""
+    block = content[0]
+    inner = block.get("content") if isinstance(block, dict) else None
+    text = inner.get("text") if isinstance(inner, dict) else None
+    if not isinstance(text, str):
+        return ""
+    try:
+        args = json.loads(text)
+    except ValueError:
+        return ""
+    command = args.get("command") if isinstance(args, dict) else None
+    return command if isinstance(command, str) else ""
 
 
 def kimi_node_found(kimi_bin: str) -> str:

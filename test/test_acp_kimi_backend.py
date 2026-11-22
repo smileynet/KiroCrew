@@ -771,6 +771,86 @@ def test_a_bad_kimi_model_is_a_value_refusal_by_its_text_not_by_code_32602() -> 
     assert _is_config_value_rejection(refused, "model", "claude") is False
 
 
+def _kimi_bash_ask(
+    command: str | None = "echo hi", *, extra_updates=()
+) -> tuple[AcpClient, object]:
+    """The recorded Bash frames replayed through a real client up to the ask.
+
+    *command* replaces the recorded command in the pre-ask update; ``None`` drops that
+    update (no earlier frame states a command). Returns the client and the built event.
+    """
+    frames = _corpus("turn-live-permission-bash")
+    client = AcpClient(acp_backend=KIMI)
+    for frame in frames:
+        if frame.get("method") == "session/request_permission":
+            break
+        update = frame["params"]["update"]
+        if update["sessionUpdate"] == "tool_call_update":
+            if command is None:
+                continue
+            text = json.dumps({"command": command})
+            update["content"][0]["content"]["text"] = text
+        msg = JsonRpcMessage.from_dict(frame)
+        client._extract_tool_event(msg)
+        client._extract_tool_call_update(msg)
+    for update in extra_updates:
+        client._extract_tool_call_update(
+            JsonRpcMessage.from_dict(
+                {
+                    "jsonrpc": "2.0",
+                    "method": "session/update",
+                    "params": {"sessionId": "kimi-session-1", "update": update},
+                }
+            )
+        )
+    ask = next(f for f in frames if f.get("method") == "session/request_permission")
+    return client, client._build_permission_event(JsonRpcMessage.from_dict(ask))
+
+
+def _gate(event):
+    from kiro_crew.hook_runtime.tool_identity import hook_gate_kwargs
+    from kiro_crew.hooks import HookManager, HooksConfig
+
+    return HookManager(HooksConfig()).on_tool_call(event.title, **hook_gate_kwargs(event))
+
+
+def test_the_bash_ask_takes_its_command_from_the_earlier_update() -> None:
+    _client, event = _kimi_bash_ask("echo hi")
+    assert event.shell_command == "echo hi"
+    assert "could not be verified" not in (_gate(event).reason or "")
+
+
+def test_a_multi_line_command_is_recovered_verbatim() -> None:
+    _client, event = _kimi_bash_ask("echo a\necho 'b'")
+    assert event.shell_command == "echo a\necho 'b'"
+
+
+def test_a_bash_ask_with_no_earlier_command_is_refused() -> None:
+    _client, event = _kimi_bash_ask(None)
+    assert event.shell_command is None
+    decision = _gate(event)
+    assert decision.action == "deny" and "could not be verified" in (decision.reason or "")
+
+
+def test_two_different_commands_for_one_call_are_refused() -> None:
+    other = {
+        "toolCallId": "3:tool-1",
+        "sessionUpdate": "tool_call_update",
+        "status": "in_progress",
+        "content": [{"type": "content", "content": {"type": "text", "text": '{"command":"id"}'}}],
+    }
+    _client, event = _kimi_bash_ask("echo hi", extra_updates=[other])
+    assert event.shell_command is None
+    assert _gate(event).action == "deny"
+
+
+@pytest.mark.parametrize("text", ["not json", "[1]", '{"cmd":"x"}', '{"command":3}', ""])
+def test_an_unreadable_command_update_recovers_nothing(text: str) -> None:
+    update = {"content": [{"type": "content", "content": {"type": "text", "text": text}}]}
+    assert kimi_mod.kimi_command_from_update(update) == ""
+    assert kimi_mod.kimi_command_from_update({"content": [update["content"][0]] * 2}) == ""
+
+
 # ── Node.js floor ────────────────────────────────────────────────────────────
 
 

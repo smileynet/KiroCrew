@@ -46,6 +46,7 @@ from kiro_crew.acp._dispatch import (
     tool_call_content_text,
 )
 from kiro_crew.acp.client_timeouts import _SEL_AUDIT_TIMEOUT_SECONDS
+from kiro_crew.acp.harness.kimi import kimi_command_from_update
 from kiro_crew.acp.harness.copilot import (
     COPILOT_IDENTITY_OVERFLOW,
     COPILOT_IDENTITY_RECORDS_MAX,
@@ -70,6 +71,7 @@ from kiro_crew.acp.types import (
 )
 from kiro_crew.agent_sdk.backends import (
     ACP_BACKEND_ANTIGRAVITY,
+    ACP_BACKEND_KIMI,
     ACP_BACKENDS_PERMISSION_KIND_FROM_TOOL_CALL,
 )
 from kiro_crew.config.paths import kiro_sessions_dir
@@ -795,6 +797,32 @@ def _recover_copilot_mcp_identity(self: AcpClient, tool_call_id: str, update: di
         unclassified[tool_call_id] = False
 
 
+def _note_kimi_shell_command(client: AcpClient, tool_use_id: str, update: dict) -> None:
+    """Cache the command Kimi states in a shell call's own update, for the gate.
+
+    Kimi's ``session/request_permission`` for ``Bash`` carries no command and no ``rawInput``
+    (``toolCall`` is only id, title and an ask text); the command is in the content of the
+    ``tool_call_update`` that precedes it, and ``rawInput`` follows the ask. Without it the
+    unverifiable-shell tier refuses every Kimi ``Bash`` call. The recovery is the same trust
+    class as a ``rawInput`` (a frame the harness wrote about its own call, never the request),
+    keyed on the same ``toolCallId`` and only for a call the ``tool_call`` frame classified as
+    a shell. Two different commands for one call, or one that disagrees with a ``rawInput``
+    already cached, blank the command so the call is refused instead of judged on either.
+    """
+    if update.get("rawInput") or client._tool_call_is_shell.get(tool_use_id) is not True:
+        return
+    command = kimi_command_from_update(update)
+    if not command:
+        return
+    cached = client._tool_call_params.get(tool_use_id)
+    cached = cached if isinstance(cached, dict) else {}
+    if cached.get("command") not in (None, command):
+        command = ""
+    if len(client._tool_call_params) > _MAX_CACHED_TOOL_PARAMS:
+        client._tool_call_params.clear()
+    client._tool_call_params[tool_use_id] = {**cached, "command": command}
+
+
 def _extract_tool_call_update(self: AcpClient, msg: JsonRpcMessage) -> AcpEvent | None:
     """Extract a real-time tool result from a `tool_call_update` session update.
 
@@ -841,6 +869,9 @@ def _extract_tool_call_update(self: AcpClient, msg: JsonRpcMessage) -> AcpEvent 
         batch_guard.note_printed(
             getattr(self, "_batch_window", None), tool_use_id, batch_guard.update_text(update)
         )
+
+    if self.backend == ACP_BACKEND_KIMI:
+        _note_kimi_shell_command(self, tool_use_id, update)
 
     output_parts: list[str] = []
 
