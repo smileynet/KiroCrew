@@ -859,7 +859,7 @@ _KIMI_ROW = {
 def test_kimi_stays_off_the_shared_acp_runtime() -> None:
     # Not reachable: Kimi's `approve_always` is only downgraded in `client_permissions`. If Kimi
     # ever joins the set, add the `approve_always` -> `approve_once` downgrade in
-    # `session_handle_permissions` first (Kimi rejects an unknown option id: `approval.ts:74-85`).
+    # `session_handle_permissions` first (Kimi rejects an unknown option id).
     from kiro_crew.agent_sdk.backends_sessions import ACP_BACKENDS_ACP_RUNTIME
 
     assert KIMI not in ACP_BACKENDS_ACP_RUNTIME

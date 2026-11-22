@@ -119,8 +119,8 @@ _KEPT_CONFIG_KEYS = frozenset({"default_model", "providers", "models", "thinking
 
 #: Set in the child so the session reports nothing to the vendor, a native install does not
 #: swap itself for a new build between runs, and the config file watcher stays off even if the
-#: config seed fails (the env var beats ``[watch] enabled``; source-backed, Kimi 2.7.2
-#: ``src/human/utils/watch.ts:511-529``). ``KIMI_CODE_HOME`` is added per spawn.
+#: config seed fails (the env var beats ``[watch] enabled``; source-backed in Kimi 2.7.2's
+#: ``isWatchEnabled``, not live-proven). ``KIMI_CODE_HOME`` is added per spawn.
 _CHILD_ENV = {
     "KIMI_DISABLE_TELEMETRY": "1",
     "KIMI_CODE_NO_AUTO_UPDATE": "1",
@@ -518,7 +518,7 @@ def kimi_repo_config_issue(work_dir: object) -> str:
     A project ``.kimi-code`` can hold ``mcp.json``, ``local.toml`` and ``[[permission.rules]]``
     allow rules; any of them could run or pre-approve a tool without Kiro Crew's approval.
     Hooks are NOT among them: Kimi 2.7.2 reads hooks from user-level config only
-    (``docs/en/customization/hooks.md:55``, "no project-level hook file"). Refused on
+    (Kimi's hooks guide: "no project-level hook file"). Refused on
     presence, in the working directory and every parent up to its git root or the user's home
     (never ``~/.kimi-code`` or ``KIMI_CODE_HOME``, which are Kimi's own home), along the path
     as given AND as resolved, with Copilot's walk. A link or an unreadable entry counts as
