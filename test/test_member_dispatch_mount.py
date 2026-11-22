@@ -1036,10 +1036,14 @@ class TestSessionHistoryWriteProtected:
 
     def test_sessions_dir_stays_readable(self):
         """Write-protected, NOT sensitive: transcripts are the user's own
-        conversations and reading them is routine."""
+        conversations and reading them is routine. Kimi's own ``.kimi-code/sessions`` is
+        the exception: its ``wire.jsonl`` records request parameters and tool schemas, so
+        it is a declared credential leaf (``host_auth``)."""
         from kiro_crew.security import sensitive_home_dirs
 
-        assert not any(p.endswith("/sessions") for p in sensitive_home_dirs())
+        assert not any(
+            p.endswith("/sessions") and not p.startswith(".kimi-code/") for p in sensitive_home_dirs()
+        )
 
 
 class TestGooseMemberAppend:
