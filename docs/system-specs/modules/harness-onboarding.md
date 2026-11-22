@@ -1193,7 +1193,8 @@ Stages 1 to 6 first, every decision that needed a live capture written down as p
 rather than guessed, then live evidence, then the Stage 7 flip. Moonshot's **Kimi Code CLI**
 (npm `@moonshot-ai/kimi-code` `2.7.2`, command `kimi`, ACP through `kimi acp`) is in
 `ACP_BACKENDS_KNOWN` and in `BASELINE_SELECTABLE_BACKENDS`, so it renders in the dashboard
-switch. Native Windows: refused at launch (no sandbox backend); WSL2 works. It is *not* the archived Python `kimi-cli`, which also
+switch. Native Windows: refused at launch (no sandbox backend); WSL2 works.
+Kimi Code CLI is *not* the archived Python `kimi-cli`, which also
 installs `kimi` and also answers `kimi acp`; on a host that ran its installer the two sit
 side by side (`~/.kimi-code/bin/kimi` there is the legacy build), so the handshake, not
 the command name, tells them apart.
@@ -1225,14 +1226,14 @@ The flip rests on these runs. Each row names what it proved and what it did not.
 | L1 (WSL2 on flamingdragon, `efb84f1b9a`) | PASS. A sandboxed Write ask, `fs/write_text_file` reached Crew, a Read, no EPERM, the real `~/.kimi-code` untouched |
 | Mac smoke (`kimi-mac-fixes.md`) | 10 PASS. The hidden-cwd refusal and the relocated `kimi-home` carve-out. The masked-path read was indirect only |
 | W3 (live, signed in) | M1a-c PASS: 94 `mcp__kirocrew-*` names announced, `select_tools` loaded, an ask with once and reject. X2: the model's tool list held no `Skill`, `Grep`, `Glob`, `WebSearch`, `FetchURL` or `ReadMediaFile` |
-| B1 (in-gateway, `b1-ingateway-2.md`, `e4b70cca68`) | PASS. `cron_list` returned a real result ("No cron jobs.") through the gateway: `/api/ipc/redeem` granted, `internal_auth /api/crons/tools agent socket capability`, `ipc_session_unbound` 0 |
+| B1 (in-gateway, `b1-ingateway-2.md`, `e4b70cca68`) | PASS, proven through an in-gateway harness script that publishes the session token via rekey, not a dispatched dashboard chat (the chat path may publish the token differently). `cron_list` returned a real result ("No cron jobs.") through the gateway: `/api/ipc/redeem` granted, `internal_auth /api/crons/tools agent socket capability`, `ipc_session_unbound` 0 |
 
 Accepted rows, none of which blocks the flip:
 
 | Row | Why it is accepted |
 |---|---|
 | Native Windows: refused at launch (no sandbox backend); WSL2 works | Fail-closed. Windows has only unit-level evidence and a handshake on flamingdragon; no sandboxed native-Windows turn exists |
-| B1 caveat: a `wrong secret (received=absent)` denial on `/api/session-tool-policy` before the first `/api/ipc/redeem`, and `session_tool_policy` `agent not resolved` lines | Seen once in the B1 run, off the cron path, which had no denial. Cause not traced and not fixed here. A stub asked once before it held its credential; the tool call itself succeeded |
+| B1 caveat: a `wrong secret (received=absent)` denial on `/api/session-tool-policy` before the first `/api/ipc/redeem`, and `session_tool_policy` `agent not resolved` lines | Seen once in the B1 run, off the cron path, which had no denial. Cause likely a stub asking once before it held its credential, but not traced and not fixed here; the tool call itself succeeded. `agent not resolved` fails closed: `mcp_shared_policy.py:744-760` answers 404 with an empty allow set, and `tools/call` keeps refusing until the agent resolves |
 | The model finding a Crew tool when the prompt does not name it (S5) | W3 and B1 named the tool. The model is told the names in `<tools_added>`; the failure mode is that tools go unused |
 | Other Crew servers in a Kimi array (panel, work, computer, guide, mate) | Only `kirocrew-core`, `kirocrew-cron` and `kirocrew-dashboard` redeem a pickup. `kirocrew-guide` and `kirocrew-mate` are withheld as for other harnesses, and Kimi is not in `ACP_BACKENDS_MEMBER_CAPABILITIES`, so it has no member dispatch tool |
 | Every Crew MCP call asks | Kimi's ask carries no server and tool split and `approve_always` is stripped, so each call asks the person (a UX cost, not a hole) |
@@ -1298,7 +1299,7 @@ row itself.
 
 | Decision | Why it waits | Where the TODO sits |
 |---|---|---|
-| `ACP_BACKENDS_SESSION_MCP_ARRAY`, `ACP_BACKENDS_PRUNE_UNSTARTABLE_MCP`, the MCP projection kind | `mirror` (`providers/mirrors/kimi.py`): measured on 2.7.2 with a fake provider, a late server's tools reach the model as deferred tools (Stage 7 below) | `providers/mirrors/registry.py` |
+| `ACP_BACKENDS_SESSION_MCP_ARRAY`, `ACP_BACKENDS_PRUNE_UNSTARTABLE_MCP`, the MCP projection kind | `mirror` (`providers/mirrors/kimi.py`): measured on 2.7.2 with a fake provider (W3 later confirmed it on a real model), a late server's tools reach the model as deferred tools (Stage 7 below) | `providers/mirrors/registry.py` |
 | ~~`ACP_BACKENDS_UNASKED_NATIVE_TOOLS` and the `HARNESS_UNASKED_TOOL_IDS` row~~ | Closed. Decided by Option B below: a member, with a row of read-only tools only; `Skill` is disabled and not in the row (N6) | `acp/harness_tool_names.py` |
 | ~~`ACP_BACKENDS_HONOR_ZERO_TOOL_BAN`, `ACP_BACKENDS_SIDE_READONLY`~~ | Out: the unasked row is not empty, so a total zero-tool ban cannot be claimed. Absent is safe | n/a |
 | ~~`ACP_BACKENDS_COMPACT`, `INLINE_COMPACTION`, `HARNESS_MANAGED_COMPACTION`, `ACP_BACKEND_PROMPT_HANDLER_COMMANDS`~~ | Out: Kimi 2.7.2 compacts in the background and the command returns before it finishes (Kimi's built-in command handler), which does not fit the inline sets. Revisit if a person needs `/compact` in the dashboard | `agent_sdk/backends_routing.py` |

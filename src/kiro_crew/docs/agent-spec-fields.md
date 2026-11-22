@@ -173,7 +173,7 @@ when the harness asks permission for them (`acp/client_permissions.py`,
 `claude_code.py` puts its deny rules in the settings file instead,
 `opencode.py` hands its rules back as `harness_deny_rules` for the client to seed
 into the harness's own `permission` config, and `goose.py`, `deepseek.py`,
-`copilot.py` and `antigravity.py` return an empty deny set and withhold the
+`copilot.py`, `antigravity.py` and `kimi.py` return an empty deny set and withhold the
 whole server, which `base.py` calls out on `SessionProjection` itself. A
 mirrored backend's broker stubs are placed by the mirror rather than
 appended afterwards: `AcpClient._pooled_mcp_servers` is inert for a mirror.
@@ -469,13 +469,13 @@ is the part worth knowing before you switch:
   server widens to that server's siblings on every mirrored harness. If that matters,
   the restriction has to be `disabledTools`, not a narrow `tools` ref.
 - **A per-tool restriction can cost the whole server on `goose`, `deepseek`,
-  `codex`, `copilot`, `strands` and `antigravity`.**
+  `codex`, `copilot`, `strands`, `antigravity` and `kimi`.**
   `per_tool_deny` on the projection record says which of three forms you get
   BEFORE a session runs. `settings-file` on `claude`, `opencode` and `mimocode` keeps the
   server mounted and the harness refuses the tool; on `opencode`, a lower config
   source that already names the tool can outrank Crew's rule, and that server is
-  withheld. `whole-server` on `goose`, `deepseek`, `copilot`, `strands` and
-  `antigravity` drops the server. `per-call` on `codex` keeps the control
+  withheld. `whole-server` on `goose`, `deepseek`, `copilot`, `strands`,
+  `antigravity` and `kimi` drops the server. `per-call` on `codex` keeps the control
   plane mounted and refuses its tool calls; a narrowed third-party server is
   withheld whole because codex can approve a `readOnlyHint` tool internally.
 - **`autoApprove` and a spec-written `permissions` block travel nowhere.**
@@ -483,7 +483,7 @@ is the part worth knowing before you switch:
   Crew's gate instead of being pre-approved inside the harness.
 - **`hooks` reaches three mirrors whole, and `resources` only half-reaches.**
   `hooks` is `translated` on `goose`, `opencode` and `strands`, where Crew's
-  turn loop fires it; it is `no-channel` on `claude`, `codex` and `antigravity`
+  turn loop fires it; it is `no-channel` on `claude`, `codex`, `antigravity` and `kimi`
   and withheld on `deepseek` and `copilot`. On `mimocode` it is `withheld` as well: that fork's
   projection follows opencode's rules, but some of its tools never ask, so Crew
   does not fire hooks there. Neither URI scheme is loaded natively, but a mapped
