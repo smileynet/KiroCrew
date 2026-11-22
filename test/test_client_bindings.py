@@ -205,6 +205,7 @@ _MEMBERS: dict[str, tuple[str, object, str, str]] = {
         "b60c5fea256e",
         "client_model_selection",
     ),
+    "_kimi_session_mcp_servers": ("function", False, "f5423acdeebc", "client_mcp_array"),
     "_pi_session_mcp_servers": ("function", False, "f5423acdeebc", "client_mcp_array"),
     "_pin_starting_mode": ("function", True, "4d0ed6879afd", "client_class"),
     "_pins_starting_mode": ("data", False, "", ""),

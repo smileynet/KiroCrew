@@ -1027,6 +1027,7 @@ _ADAPTER_MCP_SEAMS = {
     "MimoCodeLaunch": "mimocode",
     "CopilotLaunch": "copilot",
     "AntigravityLaunch": "antigravity",
+    "KimiLaunch": "kimi",
     "PiLaunch": "pi",
 }
 

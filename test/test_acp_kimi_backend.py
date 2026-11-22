@@ -100,7 +100,7 @@ def test_kimi_is_known_and_dormant() -> None:
 
 
 def test_kimi_joined_no_capability_set_without_a_capture() -> None:
-    """Membership beyond these four needs a live capture, so none is held."""
+    """Membership beyond these needs a live capture, so none is held."""
     from kiro_crew.agent_sdk import backends
 
     decided = {
@@ -109,6 +109,8 @@ def test_kimi_joined_no_capability_set_without_a_capture() -> None:
         "ACP_BACKENDS_ACP_CLIENT_SPAWNABLE",
         # Its read-only tools run with no permission request (``HARNESS_UNASKED_TOOL_IDS``).
         "ACP_BACKENDS_UNASKED_NATIVE_TOOLS",
+        # Its mcpServers array carries Crew's servers (``providers.mirrors.kimi``).
+        "ACP_BACKENDS_SESSION_MCP_ARRAY",
     }
     joined = {
         name
@@ -157,6 +159,7 @@ def test_the_child_env_is_crews_home_no_telemetry_no_self_update_and_no_watch() 
         "KIMI_DISABLE_TELEMETRY": "1",
         "KIMI_CODE_NO_AUTO_UPDATE": "1",
         "KIMI_CODE_WATCH": "0",
+        "KIMI_CODE_EXPERIMENTAL_TOOL_SELECT": "1",
     }
 
 
@@ -187,9 +190,13 @@ async def test_the_spawn_resolves_the_binary_and_arms_the_unasked_tripwire(
     object.__setattr__(ctx, "environ", {})
     object.__setattr__(ctx, "home", tmp_path / "userhome")
 
+    warmed = AsyncMock()
+    monkeypatch.setattr(client, "_prepare_session_mcp", warmed)
     launch = kimi_mod.KimiLaunch()
     plan = await launch.resolve_spawn(ctx)
 
+    # The mirror reads the agent spec into the session's MCP cache before ``session/new``.
+    warmed.assert_awaited_once()
     assert plan.argv == ["/opt/bin/kimi", "acp"]
     assert (plan.spawn_label, plan.stderr_label) == ("kimi acp", "kimi")
     resolved.assert_awaited_once_with(KIMI)
@@ -201,6 +208,17 @@ async def test_the_spawn_resolves_the_binary_and_arms_the_unasked_tripwire(
     launch.apply_spawn_env(env)
     assert Path(env["KIMI_CODE_HOME"]) == tmp_path / "crew" / "kimi-home"
     assert (Path(env["KIMI_CODE_HOME"]) / "config.toml").is_file()
+
+
+def test_the_session_array_is_the_kimi_mirrors_and_reaches_the_launch_seam() -> None:
+    from kiro_crew.agent_sdk.backends import ACP_BACKENDS_SESSION_MCP_ARRAY
+    from kiro_crew.providers.mirrors.registry import MIRRORS, PROJECTIONS, ProjectionKind
+
+    assert KIMI in ACP_BACKENDS_SESSION_MCP_ARRAY
+    assert PROJECTIONS[KIMI].kind is ProjectionKind.MIRROR and KIMI in MIRRORS
+    client = AcpClient(acp_backend=KIMI)
+    client._session_mcp_cache = [{"name": "kirocrew-core", "command": "x", "args": [], "env": []}]
+    assert kimi_mod.KimiLaunch().session_mcp_servers(client) == client._session_mcp_cache
 
 
 # ── handshake: identity and release ──────────────────────────────────────────

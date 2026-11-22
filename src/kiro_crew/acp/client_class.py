@@ -878,6 +878,7 @@ class AcpClient:
     _mimocode_session_mcp_servers = _client_mcp_array._mimocode_session_mcp_servers
     _copilot_session_mcp_servers = _client_mcp_array._copilot_session_mcp_servers
     _antigravity_session_mcp_servers = _client_mcp_array._antigravity_session_mcp_servers
+    _kimi_session_mcp_servers = _client_mcp_array._kimi_session_mcp_servers
     _pi_session_mcp_servers = _client_mcp_array._pi_session_mcp_servers
     _republish_pi_mcp_handoff = _client_mcp_array._republish_pi_mcp_handoff
     _discard_pi_mcp_handoff = _client_mcp_array._discard_pi_mcp_handoff

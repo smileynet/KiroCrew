@@ -239,6 +239,9 @@ class ProcessSession(Protocol):
     def _antigravity_session_mcp_servers(self) -> list[dict[str, Any]]:
         """The Antigravity session's ``mcpServers`` entries."""
 
+    def _kimi_session_mcp_servers(self) -> list[dict[str, Any]]:
+        """The Kimi Code session's ``mcpServers`` entries."""
+
     def _pi_session_mcp_servers(self) -> list[dict[str, Any]]:
         """The pi session's ``mcpServers`` entries."""
 

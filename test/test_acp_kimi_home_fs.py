@@ -145,15 +145,28 @@ def test_the_config_is_the_live_tested_one() -> None:
         ("deny", "Edit(/crew/kimi-home/**)"),
     ]
     assert config["tools"]["disabled"] == list(kimi_mod.KIMI_DISABLED_TOOLS)
+    # Crew's own MCP servers are offered as deferred tools (spike M1), so ``mcp__*`` is not disabled.
+    assert config["mcp"] == {"default_deferred": True}
+    assert not any(tool.startswith("mcp__") for tool in kimi_mod.KIMI_DISABLED_TOOLS)
     assert set(kimi_mod.KIMI_DISABLED_TOOLS) == {
         "WebSearch",
         "FetchURL",
         "ReadMediaFile",
-        "mcp__*",
         "Grep",
         "Glob",
         "Skill",
     }
+
+
+def test_a_home_mcp_json_refuses_the_spawn(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("KIROCREW_HOME", str(tmp_path))
+    home = kimi_mod.kimi_home_dir()
+    (home / "credentials").mkdir(parents=True)
+    (home / "credentials" / "a.json").write_text("{}")
+    (home / "mcp.json").write_text("{}")
+    with pytest.raises(AcpToolGateUnroutable) as raised:
+        kimi_mod.prepare_kimi_home()
+    assert "mcp.json" in str(raised.value) and raised.value.user_worded is True
 
 
 def test_the_login_part_is_kept_and_everything_else_is_crews() -> None:
@@ -163,7 +176,15 @@ def test_the_login_part_is_kept_and_everything_else_is_crews() -> None:
     login = tomllib.loads(_LOGIN_CONFIG)
     assert config["default_model"] == login["default_model"]
     assert config["providers"] == login["providers"]
-    assert config["models"] == login["models"]
+    # Each kept model also declares the capability that lets Kimi defer MCP tools for it.
+    kept_model = login["models"]["kimi-code/kimi-for-coding"]
+    assert config["models"] == {
+        "kimi-code/kimi-for-coding": {
+            **kept_model,
+            "capabilities": [*kept_model["capabilities"], "dynamically_loaded_tools"],
+        }
+    }
+    assert config["providers"]["managed:kimi-code"]["type"] == "kimi"
     assert config["thinking"] == {"enabled": True}
     # The login's own mode, rules, hooks and services never survive the rewrite.
     assert config["default_permission_mode"] == "manual"

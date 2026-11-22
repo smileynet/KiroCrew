@@ -51,6 +51,7 @@ from kiro_crew.providers.mirrors.codex import CodexMirror
 from kiro_crew.providers.mirrors.copilot import CopilotMirror
 from kiro_crew.providers.mirrors.deepseek import DeepSeekMirror
 from kiro_crew.providers.mirrors.goose import GooseMirror
+from kiro_crew.providers.mirrors.kimi import KimiMirror
 from kiro_crew.providers.mirrors.mimocode import MimoCodeMirror
 from kiro_crew.providers.mirrors.opencode import OpenCodeMirror
 from kiro_crew.providers.mirrors.strands import StrandsMirror
@@ -234,6 +235,7 @@ MIRRORS: dict[str, type[AgentConfigMirror]] = {
     ACP_BACKEND_DEEPSEEK: DeepSeekMirror,
     ACP_BACKEND_COPILOT: CopilotMirror,
     ACP_BACKEND_STRANDS: StrandsMirror,
+    ACP_BACKEND_KIMI: KimiMirror,
     ACP_BACKEND_MIMOCODE: MimoCodeMirror,
 }
 
@@ -428,15 +430,15 @@ PROJECTIONS: dict[str, McpProjection] = {
         per_tool_deny=PerToolDeny.WHOLE_SERVER,
     ),
     ACP_BACKEND_KIMI: McpProjection(
-        kind=ProjectionKind.NO_CHANNEL,
-        reason="Dormant: the Kimi launch adds nothing to the session's mcpServers array, so a "
-        "Kimi session holds none of Crew's MCP servers. Measured on 2.7.2: the array mounts "
-        "Crew's own servers (/mcp lists kirocrew-core connected, 85 tools), but a server that "
-        "connects after the session's profile is bound is left out of the model's tool list, "
-        "and kirocrew-core connected about 1 s after it in every run measured",
-        channel="the session/new mcpServers array, once Kimi offers the tools of a server "
-        "that connects after the profile bind, or Crew's servers connect before it",
-        tracking="docs/system-specs/modules/harness-onboarding.md#worked-example-kimi",
+        kind=ProjectionKind.MIRROR,
+        reason="kimi.py -- the session/new mcpServers array, measured on 2.7.2: Crew's "
+        "stdio servers mount, and a call to one asks session/request_permission first. "
+        "A server that connects after the model's profile is bound (kirocrew-core, about "
+        "1 s) reaches the model only as a deferred tool, which the Kimi home config "
+        "([mcp] default_deferred), the child env KIMI_CODE_EXPERIMENTAL_TOOL_SELECT and a "
+        "kimi-protocol provider arrange; select_tools then loads it (spike M1, a fake "
+        "provider; no live model turn yet)",
+        per_tool_deny=PerToolDeny.WHOLE_SERVER,
     ),
     ACP_BACKEND_MIMOCODE: McpProjection(
         kind=ProjectionKind.MIRROR,

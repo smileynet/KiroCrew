@@ -1215,6 +1215,17 @@ def _antigravity_session_mcp_servers(self: AcpClient) -> list:
     return self._session_mcp_servers()
 
 
+def _kimi_session_mcp_servers(self: AcpClient) -> list:
+    """MCP server array passed to a Kimi Code ``session/new`` / ``session/load``.
+
+    The Kimi twin of :meth:`_antigravity_session_mcp_servers`: the member's projected servers,
+    unchanged. ``kimi acp`` reads no Kiro agent file, so this array is its whole channel for
+    Crew's servers, which Kimi defers and offers through ``select_tools``. In-memory only
+    (harness-parity H13).
+    """
+    return self._session_mcp_servers()
+
+
 def _pi_session_mcp_servers(self: AcpClient) -> list:
     """MCP server array passed to a pi ``session/new`` / ``session/load``.
 

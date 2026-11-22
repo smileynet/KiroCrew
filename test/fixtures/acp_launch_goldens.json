@@ -152,6 +152,7 @@
       "acp"
     ],
     "env_added": {
+      "KIMI_CODE_EXPERIMENTAL_TOOL_SELECT": "1",
       "KIMI_CODE_HOME": "<kimi-home>",
       "KIMI_CODE_NO_AUTO_UPDATE": "1",
       "KIMI_CODE_WATCH": "0",

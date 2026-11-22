@@ -152,6 +152,13 @@ from kiro_crew.agent_sdk.backends import (
 # was asked ``initialize``, ``tools/list`` and ``tools/call``, and the call came back
 # under opencode's fused title (``crew-probe_crew_probe_echo``) after a permission
 # request (``test/fixtures/acp_frames/mimocode/mcp-stdio-mount-live.jsonl``).
+# kimi is a member on the array it mounts, measured on 2.7.2 (a stdio element is started
+# and listed as ``mcp__<server>__<tool>``, and a call asks first,
+# ``test/fixtures/acp_frames/kimi/turn-live-permission-mcp``). Its tools reach the MODEL only
+# as DEFERRED tools: ``[mcp] default_deferred`` in the home config, the child env
+# ``KIMI_CODE_EXPERIMENTAL_TOOL_SELECT=1`` and a ``kimi``-protocol provider, after which
+# ``select_tools`` loads them (spike M1, ``reports/w1-spikes-mcp.md``; a fake provider, no
+# live model turn yet).
 ACP_BACKENDS_SESSION_MCP_ARRAY: FrozenSet[str] = frozenset(
     {
         ACP_BACKEND_CLAUDE,
@@ -164,6 +171,7 @@ ACP_BACKENDS_SESSION_MCP_ARRAY: FrozenSet[str] = frozenset(
         ACP_BACKEND_COPILOT,
         ACP_BACKEND_STRANDS,
         ACP_BACKEND_ANTIGRAVITY,
+        ACP_BACKEND_KIMI,
     }
 )
 

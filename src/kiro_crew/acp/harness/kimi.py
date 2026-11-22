@@ -48,12 +48,13 @@ import subprocess
 import tempfile
 import tomllib
 from collections.abc import Mapping
+from typing import Any
 from pathlib import Path
 from urllib.parse import urlsplit
 
 from kiro_crew import acp_tool_gate
 from kiro_crew.acp import launch as launch_mod
-from kiro_crew.acp.harness.base import ProcessAdapter, SpawnContext, SpawnPlan
+from kiro_crew.acp.harness.base import ProcessAdapter, ProcessSession, SpawnContext, SpawnPlan
 from kiro_crew.acp.harness.copilot import _ancestors as _project_ancestors
 from kiro_crew.acp.transport_errors import AcpToolGateUnroutable
 from kiro_crew.agent_sdk.backends import ACP_BACKEND_KIMI
@@ -110,12 +111,12 @@ _MANIFEST_SEARCH_DEPTH = 3
 #: sees them and Kimi refuses them at execution. Each either reaches the network
 #: (``WebSearch``, ``FetchURL``), reads media or any path without an ask rule that can fence it
 #: (``ReadMediaFile``, ``Grep``, ``Glob``: their rule subject is the search pattern, not the
-#: path, and they run unasked), or adds a tool Crew did not mount (``mcp__*``), or puts text from a skill folder in the
+#: path, and they run unasked), or puts text from a skill folder in the
 #: model's context with no ask (``Skill``; its builtin ``update-config`` and ``mcp-config`` skills
 #: also coach edits Crew denies). ``Bash`` stays
 #: and asks, so a search still goes through the person. Source: ``reports/kimi-levers-source.md``
 #: section 10, read fencing choice A; live proof for the first four in ``kimi-levers-acp.md``.
-KIMI_DISABLED_TOOLS = ("WebSearch", "FetchURL", "ReadMediaFile", "mcp__*", "Grep", "Glob", "Skill")
+KIMI_DISABLED_TOOLS = ("WebSearch", "FetchURL", "ReadMediaFile", "Grep", "Glob", "Skill")
 
 #: The top-level keys of the home's previous ``config.toml`` that survive Crew's rewrite: what
 #: ``kimi login`` writes for its managed provider and models (seen in a signed-in 2.7.2 home).
@@ -130,6 +131,10 @@ _CHILD_ENV = {
     "KIMI_DISABLE_TELEMETRY": "1",
     "KIMI_CODE_NO_AUTO_UPDATE": "1",
     "KIMI_CODE_WATCH": "0",
+    # Without it a late-connecting MCP server's tools never reach the model (Stage 7). With
+    # ``[mcp] default_deferred`` the tools are announced and loaded through ``select_tools``
+    # (spike M1, ``reports/w1-spikes-mcp.md``). Experimental in Kimi 2.7.2.
+    "KIMI_CODE_EXPERIMENTAL_TOOL_SELECT": "1",
 }
 
 #: Removed from the child: set, it marks every repo trusted, which would let a project's own
@@ -163,6 +168,7 @@ _KEPT_MODEL_KEYS = frozenset(
     }
 )
 _KEPT_THINKING_KEYS = frozenset({"enabled"})
+_DEFERRED_TOOLS = "dynamically_loaded_tools"
 
 
 def kimi_installed_version(kimi_bin: str) -> str:
@@ -338,6 +344,19 @@ def _keep(table: object, allowed: frozenset[str]) -> dict:
     return {k: v for k, v in table.items() if k in allowed} if isinstance(table, dict) else {}
 
 
+def _with_deferred_tools(model: dict) -> dict:
+    """*model* with ``dynamically_loaded_tools`` among its capabilities.
+
+    Without it Kimi ignores ``[mcp] default_deferred`` for that model and a deferred MCP tool is
+    never offered (spike M1). The login writes none of its own, so it is added to every kept model.
+    """
+    capabilities = model.get("capabilities")
+    capabilities = list(capabilities) if isinstance(capabilities, list) else []
+    if _DEFERRED_TOOLS not in capabilities:
+        capabilities.append(_DEFERRED_TOOLS)
+    return {**model, "capabilities": capabilities}
+
+
 def _kept_tables(kept: Mapping[str, object]) -> dict[str, dict]:
     """The ``providers``, ``models`` and ``thinking`` of *kept*, cut to the allowed sub-keys.
 
@@ -369,7 +388,7 @@ def _kept_tables(kept: Mapping[str, object]) -> dict[str, dict]:
     return {
         "providers": providers,
         "models": {
-            name: _keep(model, _KEPT_MODEL_KEYS)
+            name: _with_deferred_tools(_keep(model, _KEPT_MODEL_KEYS))
             for name, model in (models.items() if isinstance(models, dict) else ())
         },
         "thinking": _keep(kept.get("thinking"), _KEPT_THINKING_KEYS),
@@ -397,6 +416,9 @@ def render_kimi_config(home: str, kept: Mapping[str, object] | None = None) -> s
     if isinstance(kept.get("default_model"), str):
         lines.append(f"default_model = {_toml_str(kept['default_model'])}")
     lines += ["", "[watch]", "enabled = false"]
+    # Deferred, so a server that connects after the profile bind is still offered through
+    # ``select_tools`` (spike M1). Needs the child env above and a ``kimi``-protocol provider.
+    lines += ["", "[mcp]", "default_deferred = true"]
     rules = (
         ("ask", "Write"),
         ("ask", "Edit"),
@@ -574,6 +596,17 @@ def prepare_kimi_home() -> str:
         raise AcpToolGateUnroutable(
             kimi_signed_out_message(home), transient=False, user_worded=True
         )
+    if os.path.lexists(home / "mcp.json"):
+        # Crew's MCP servers arrive on the ``session/new`` array. Kimi also reads this file, and
+        # ``mcp__*`` is no longer in ``[tools] disabled``, so a server named here would be offered
+        # with none of Crew's say.
+        raise AcpToolGateUnroutable(
+            f"Kiro Crew's Kimi home holds an mcp.json ({home / 'mcp.json'}), which would mount "
+            "MCP servers Kiro Crew did not approve, so Kiro Crew does not start a Kimi Code "
+            "session. Delete that file, then start a new chat.",
+            transient=False,
+            user_worded=True,
+        )
     try:
         with open(home / "config.toml", "rb") as handle:
             previous = tomllib.load(handle)
@@ -637,8 +670,10 @@ def kimi_repo_config_issue(work_dir: object) -> str:
 class KimiLaunch(ProcessAdapter):
     """Kimi Code CLI: a self-served binary whose asking is a session config option.
 
-    It adds nothing to the session's MCP array (the ``ProcessAdapter`` default): Crew's
-    MCP projection for Kimi is a Stage 7 decision not taken yet.
+    Its MCP array is the session's own (``providers.mirrors.kimi``, warmed by the spawn):
+    Crew's servers reach the model as deferred tools, announced and loaded through Kimi's
+    ``select_tools`` (the home config's ``[mcp] default_deferred`` and the child env's
+    ``KIMI_CODE_EXPERIMENTAL_TOOL_SELECT``; spike M1). A call to one asks like any tool.
     """
 
     backend = ACP_BACKEND_KIMI
@@ -651,6 +686,8 @@ class KimiLaunch(ProcessAdapter):
         """Refuse a project with its own config, resolve the binary, then mask."""
         session = ctx.session
         assert session is not None, "kimi is launched for one session"
+        # The mirror reads the agent spec into this session's MCP cache, off the loop.
+        await session._prepare_session_mcp()
         # Before anything is resolved: a fact about the folder, so a retry refuses the
         # same way and every surface shows the remedy.
         repo_issue = await asyncio.to_thread(
@@ -708,6 +745,10 @@ class KimiLaunch(ProcessAdapter):
             extra_private_dirs=await asyncio.to_thread(crew_home_visible_spellings, self._home),
             refuse_masked_workdir=True,
         )
+
+    def session_mcp_servers(self, session: ProcessSession) -> list[dict[str, Any]]:
+        """The Kimi session's own ``mcpServers`` entries, warmed by the spawn."""
+        return session._kimi_session_mcp_servers()
 
     def apply_spawn_env(self, env: dict[str, str], *, spawned_binary: str | None = None) -> None:
         """Point the child at Crew's home, and keep it from reporting usage or updating itself.
