@@ -604,6 +604,8 @@ The Codex onboarding ran every stage; it is selectable:
 | residual | ACP v1 cannot require a prompt for a passive READ, so the sensitive-path block does not see this harness's reads. Mitigated at the OS boundary instead: its child cannot read the credential homes the standard tier leaves open. |
 | 8 live spill | Not reached. |
 
+B1 root cause: the failed W3/W4 runs built the Kimi session in a test script's own process, so `agent_socket_bound()` was false and no pickup was issued (`with_ipc_pickups` now warns once per backend). In the gateway process the pickup is issued and redeems. Test it by starting the Kimi chat through the gateway, or host the gateway in-process and build the session in a thread, then call a Crew tool (`cron_list`) and expect `/api/ipc/redeem granted`.
+
 The lesson worth carrying: every stage is a named, checkable state, so a harness
 that stops short stops at a named stage, and closing the gap is that one stage
 rather than a re-litigation. That is the shape to aim for — not "complete or
