@@ -167,6 +167,8 @@ _INHERITED_HOME_OVERRIDE_ENV_VARS = (
     "COPILOT_HOME",
     # Google Antigravity relocates its ACP settings and OAuth state together.
     "GEMINI_HOME",
+    # Kimi Code CLI relocates its whole home, OAuth tokens included, from one variable.
+    "KIMI_CODE_HOME",
 )
 
 
