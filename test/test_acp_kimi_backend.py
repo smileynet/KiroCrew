@@ -599,6 +599,17 @@ def test_the_installed_release_is_read_from_the_npm_manifest(tmp_path) -> None:
     assert kimi_mod.kimi_installed_version(str(_npm_install(tmp_path, "2.7.2"))) == "2.7.2"
 
 
+def test_the_release_is_read_below_a_windows_npm_shim(tmp_path) -> None:
+    package = tmp_path / "kimi2" / "node_modules" / "@moonshot-ai" / "kimi-code"
+    package.mkdir(parents=True)
+    (package / "package.json").write_text(
+        json.dumps({"name": "@moonshot-ai/kimi-code", "version": "2.7.2"})
+    )
+    shim = tmp_path / "kimi2" / "kimi.cmd"
+    shim.write_text("")
+    assert kimi_mod.kimi_installed_version(str(shim)) == "2.7.2"
+
+
 def test_a_build_with_no_manifest_reads_as_unknown(tmp_path) -> None:
     legacy = tmp_path / "kimi"
     legacy.write_text("")

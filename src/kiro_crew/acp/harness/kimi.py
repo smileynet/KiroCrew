@@ -173,9 +173,13 @@ def kimi_installed_version(kimi_bin: str) -> str:
         here = Path(os.path.realpath(kimi_bin)).parent
     except (OSError, ValueError):
         return ""
-    for directory in [here, *here.parents][:_MANIFEST_SEARCH_DEPTH]:
+    # A POSIX bin link resolves to ``<package>/dist/main.mjs``, so the manifest is above it. A
+    # Windows npm shim (``kimi.cmd``) sits beside ``node_modules``, so it is BELOW it.
+    manifests = [here / "node_modules" / "@moonshot-ai" / "kimi-code" / "package.json"]
+    manifests += [d / "package.json" for d in [here, *here.parents][:_MANIFEST_SEARCH_DEPTH]]
+    for manifest in manifests:
         try:
-            data = json.loads((directory / "package.json").read_text(encoding="utf-8"))
+            data = json.loads(manifest.read_text(encoding="utf-8"))
         except (OSError, ValueError):
             continue
         if isinstance(data, dict) and data.get("name") == KIMI_NPM_PACKAGE:
