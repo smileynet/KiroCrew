@@ -938,3 +938,12 @@ def test_the_probe_reports_an_old_node_as_missing_with_the_version_found(monkeyp
     assert state.installed == backend_install.MISSING
     assert state.missing_components == ("node 22.19",)
     assert state.found_version == "v20.20.2"
+
+
+def test_a_project_mcp_json_in_the_cwd_or_a_parent_is_refused(tmp_path) -> None:
+    (tmp_path / ".git").mkdir()
+    (tmp_path / ".mcp.json").write_text("{}")
+    work = tmp_path / "sub" / "deep"
+    work.mkdir(parents=True)
+    issue = kimi_mod.kimi_repo_config_issue(work)
+    assert str(tmp_path / ".mcp.json") in issue and "Kimi Code" in issue

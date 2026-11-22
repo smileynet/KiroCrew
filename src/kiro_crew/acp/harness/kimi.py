@@ -607,6 +607,15 @@ def prepare_kimi_home() -> str:
             transient=False,
             user_worded=True,
         )
+    if os.path.lexists(home / "plugins" / "installed.json"):
+        # Kimi loads a plugin's MCP servers from here whatever its workspace trust says.
+        raise AcpToolGateUnroutable(
+            f"Kiro Crew's Kimi home holds installed plugins ({home / 'plugins' / 'installed.json'}), "
+            "which would mount MCP servers Kiro Crew did not approve, so Kiro Crew does not "
+            "start a Kimi Code session. Delete the plugins folder, then start a new chat.",
+            transient=False,
+            user_worded=True,
+        )
     try:
         with open(home / "config.toml", "rb") as handle:
             previous = tomllib.load(handle)
@@ -655,6 +664,16 @@ def kimi_repo_config_issue(work_dir: object) -> str:
         found = os.path.join(directory, KIMI_PROJECT_DIR)
         if os.path.realpath(found) in user_homes:
             continue
+        project_mcp = os.path.join(directory, ".mcp.json")
+        if os.path.lexists(project_mcp):
+            return (
+                f"This project carries an MCP server file ({project_mcp}). Kimi Code CLI "
+                "reads it from the project and its parents, so it could mount servers "
+                "Kiro Crew did not approve. Kiro Crew therefore does not start a Kimi Code "
+                "session here; this applies only to the Kimi Code harness. Remove or "
+                "rename that file, or pick another harness in Settings › Agent Harness, "
+                "then start a new chat."
+            )
         if os.path.lexists(found):
             return (
                 f"This project carries Kimi Code CLI's own configuration ({found}). "

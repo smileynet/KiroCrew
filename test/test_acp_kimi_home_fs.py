@@ -1154,3 +1154,15 @@ def test_signed_out_at_session_new_is_the_signed_out_remedy() -> None:
     with pytest.raises(AcpError) as raised:
         _raise_acp_error(frame, backend=KIMI)
     assert "kimi-home kimi login" in str(raised.value)
+
+
+def test_a_home_plugins_manifest_refuses_the_spawn(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("KIROCREW_HOME", str(tmp_path))
+    home = kimi_mod.kimi_home_dir()
+    (home / "credentials").mkdir(parents=True)
+    (home / "credentials" / "a.json").write_text("{}")
+    (home / "plugins").mkdir()
+    (home / "plugins" / "installed.json").write_text("{}")
+    with pytest.raises(AcpToolGateUnroutable) as raised:
+        kimi_mod.prepare_kimi_home()
+    assert "plugins" in str(raised.value) and raised.value.user_worded is True
