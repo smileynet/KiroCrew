@@ -1166,3 +1166,37 @@ def test_a_home_plugins_manifest_refuses_the_spawn(tmp_path, monkeypatch) -> Non
     with pytest.raises(AcpToolGateUnroutable) as raised:
         kimi_mod.prepare_kimi_home()
     assert "plugins" in str(raised.value) and raised.value.user_worded is True
+
+
+def _auth(command: str, *args: str) -> dict:
+    return {
+        "authMethods": [
+            {"_meta": {"terminal-auth": {"command": command, "args": list(args or ["login"])}}}
+        ]
+    }
+
+
+@pytest.mark.parametrize(
+    "hostile",
+    [
+        _auth('C:\\x" & calc & "'),
+        _auth(r"C:\%COMSPEC%\kimi.exe"),
+        _auth("C:\\kimi.exe", "login", "a\u2019; calc; \u2019b"),
+        _auth("C:\\kimi.exe", "login", "`calc`"),
+        _auth("C:\\kimi.exe", "login", "$(calc)"),
+        _auth(r"C:\tools\powershell.exe", "login"),
+    ],
+    ids=["cmd-quote", "cmd-percent", "ps-smart-quote", "ps-backtick", "ps-dollar", "not-kimi"],
+)
+def test_a_hostile_terminal_auth_falls_back_to_the_bare_command(hostile) -> None:
+    assert kimi_mod.kimi_terminal_auth(hostile) == ()
+    for shell in ("powershell", "cmd", "posix"):
+        assert "calc" not in kimi_mod.kimi_login_command(
+            _WIN_HOME, shell, kimi_mod.kimi_terminal_auth(hostile)
+        )
+    assert "kimi login --region global" in kimi_mod.kimi_login_command(_WIN_HOME, "cmd", ())
+
+
+@pytest.mark.parametrize("command", ["kimi", "C:\\n\\kimi.cmd", "/opt/k i/kimi", "C:\\a\\kimi.exe"])
+def test_a_plain_kimi_launcher_is_kept(command) -> None:
+    assert kimi_mod.kimi_terminal_auth(_auth(command)) == (command, "login")

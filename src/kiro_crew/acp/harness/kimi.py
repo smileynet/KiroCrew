@@ -464,9 +464,22 @@ def kimi_terminal_auth(initialize_result: object) -> tuple[str, ...]:
     parts = (command, *args)
     if not all(isinstance(p, str) and p and p.isprintable() for p in parts):
         return ()
+    # The text is printed to be pasted into a terminal, and it comes from the binary's own
+    # answer. Anything a cmd or PowerShell line would read as syntax is refused, and so is a
+    # command that is not Kimi's launcher, so the caller prints the bare form instead.
+    if any(_TERMINAL_AUTH_HOSTILE.search(p) for p in parts):
+        return ()
+    if re.split(r"[\\/]", command)[-1].lower() not in _TERMINAL_AUTH_COMMANDS:
+        return ()
     if command.lower().endswith((".mjs", ".js")):
         return ("node", *parts)
     return parts
+
+
+#: cmd metacharacters and ``%``; PowerShell's typographic quotes (U+2018 to U+201B, which it
+#: reads as quote marks), backtick and ``$``; and the plain quote.
+_TERMINAL_AUTH_HOSTILE = re.compile("[\"%&|<>^`$\u2018-\u201b]")
+_TERMINAL_AUTH_COMMANDS = frozenset({"kimi", "kimi.cmd", "kimi.exe", "main.mjs"})
 
 
 def kimi_login_command(
