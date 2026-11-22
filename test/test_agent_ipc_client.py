@@ -457,3 +457,51 @@ def test_a_capability_holder_reads_its_tool_policy_by_capability(monkeypatch):
     mcp_shared_policy._excluded_tools_by_session.clear()
     assert sent == {"capability": "c" * 64, "socket": "/x/agent.sock"}
     assert "artifact_save" in policy.excluded
+
+
+def test_a_masked_kimi_spawn_carries_a_pickup_for_each_crew_server_in_the_array(bound):
+    """Kimi's routing is SESSION_CONFIG, so only the masked-child rule reaches it."""
+    from kiro_crew.agent_sdk.tool_gate import is_enforced
+
+    assert is_enforced("kimi")
+    array = [
+        {"name": name, "command": "kirocrew", "args": [f"mcp-{name}"], "env": []}
+        for name in ("kirocrew-core", "kirocrew-cron", "kirocrew-dashboard")
+    ] + [{"name": "third-party", "command": "x", "args": [], "env": []}]
+    *crew, other = _issue(array, backend="kimi")
+    assert all(len(_env(e)[PICKUP_ENV]) == 64 for e in crew)
+    assert all(_env(e)[GATEWAY_PID_ENV] == str(os.getpid()) for e in crew)
+    assert PICKUP_ENV not in _env(other)
+    assert {entry.server for entry in bound._pickups.values()} == {e["name"] for e in crew}
+
+
+def test_a_kimi_broker_stub_still_gets_no_pickup(bound):
+    stub = {
+        "name": "kirocrew-cron",
+        "command": sys.executable,
+        "args": ["-m", STUB_MODULE, "--server", "kirocrew-cron"],
+        "env": [],
+    }
+    (out,) = _issue([stub], backend="kimi")
+    assert PICKUP_ENV not in _env(out) and not bound._pickups
+
+
+def test_the_cron_server_redeems_its_pickup_before_it_serves():
+    import inspect
+
+    from kiro_crew import mcp_cron
+
+    assert "redeem_at_startup(" in inspect.getsource(mcp_cron.run_mcp_server)
+
+
+def test_the_kimi_child_can_reach_the_agent_socket_but_not_the_secret():
+    from kiro_crew.agent_ipc_wire import AGENT_IPC_LEAF
+    from kiro_crew.agent_sdk.tool_gate import adapter_hidden_credential_dirs
+    from kiro_crew.config.loader import config_dir
+
+    hidden = {os.path.normpath(p) for p in adapter_hidden_credential_dirs("kimi")}
+    home = config_dir()
+    agent_dir = os.path.normpath(str(home / AGENT_IPC_LEAF))
+    assert not any(agent_dir == h or agent_dir.startswith(h + os.sep) for h in hidden)
+    assert os.path.normpath(str(home / "run")) in hidden
+    assert os.path.normpath(str(home / ".local_secret")) in hidden

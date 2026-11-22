@@ -1462,6 +1462,12 @@ ADVERTISE_CALLER_IDENTITY = SERVER.advertise_caller_identity
 
 def run_mcp_server() -> None:
     """Run MCP stdio server — reads JSON-RPC from stdin, writes to stdout."""
+    # A masked harness hands this server a one-time pickup in place of the secret it
+    # withholds (``agent_ipc_client``); redeem it before the first request.
+    from kiro_crew.agent_ipc_client import redeem_at_startup
+    from kiro_crew.port_resolution import resolve_client_port_src
+
+    redeem_at_startup(lambda: resolve_client_port_src(None)[0])
     run_mcp_stdio_loop(
         SERVER.name, SERVER.version, _list_tools, _call_tool, **SERVER.loop_options()
     )
