@@ -233,6 +233,53 @@ def test_the_login_command_is_spelled_per_shell() -> None:
     )
 
 
+_WIN_AUTH = {
+    "authMethods": [
+        {
+            "_meta": {
+                "terminal-auth": {
+                    "command": r"C:\Users\a b\kimi2\main.mjs",
+                    "args": ["login"],
+                    "env": {"KIMI_CODE_HOME": "ignored"},
+                }
+            }
+        }
+    ]
+}
+
+
+def test_the_login_command_uses_the_invocation_kimi_reports() -> None:
+    auth = kimi_mod.kimi_terminal_auth(_WIN_AUTH)
+    assert auth == ("node", r"C:\Users\a b\kimi2\main.mjs", "login")
+    assert kimi_mod.kimi_login_command(_WIN_HOME, "powershell", auth) == (
+        r"$env:KIMI_CODE_HOME='C:\Users\a b\.kiro\crew\kimi-home'; "
+        r"& 'node' 'C:\Users\a b\kimi2\main.mjs' 'login' --region global"
+    )
+    assert kimi_mod.kimi_login_command(_WIN_HOME, "cmd", auth) == (
+        r'set "KIMI_CODE_HOME=C:\Users\a b\.kiro\crew\kimi-home" && '
+        r'"node" "C:\Users\a b\kimi2\main.mjs" "login" --region global'
+    )
+    assert kimi_mod.kimi_login_command("/h", "posix", ("/opt/k i/kimi", "login")) == (
+        "KIMI_CODE_HOME=/h '/opt/k i/kimi' login --region global"
+    )
+
+
+@pytest.mark.parametrize(
+    "bad",
+    [
+        None,
+        {},
+        {"authMethods": []},
+        {"authMethods": [{"_meta": {"terminal-auth": {"command": 1}}}]},
+    ],
+)
+def test_a_missing_or_malformed_terminal_auth_falls_back_to_the_bare_command(bad) -> None:
+    assert kimi_mod.kimi_terminal_auth(bad) == ()
+    assert (
+        kimi_mod.kimi_login_command("/h", "posix") == "KIMI_CODE_HOME=/h kimi login --region global"
+    )
+
+
 def test_the_signed_out_message_names_the_windows_shells_on_windows(monkeypatch) -> None:
     monkeypatch.setattr(kimi_mod.os, "name", "nt")
     message = kimi_mod.kimi_signed_out_message(_WIN_HOME)

@@ -23,6 +23,7 @@ from kiro_crew.acp.harness.kimi import (
     KIMI_AGENT_NAME,
     kimi_signed_out,
     kimi_signed_out_refusal,
+    kimi_terminal_auth,
 )
 from kiro_crew.acp.no_model_provider import AcpNoModelProvider
 from kiro_crew.acp.transport_errors import AcpToolGateUnroutable
@@ -72,4 +73,6 @@ def _refuse_harness_default_model(self: KimiAcpClient) -> None:
     if kimi_signed_out(self._acp_config_options):
         # The exact command for Crew's own home, which the static declaration cannot spell,
         # or the unreadable-home cause when the gateway itself sees a sign-in.
-        raise AcpNoModelProvider(kimi_signed_out_refusal())
+        raise AcpNoModelProvider(
+            kimi_signed_out_refusal(terminal_auth=kimi_terminal_auth(self.initialize_result))
+        )

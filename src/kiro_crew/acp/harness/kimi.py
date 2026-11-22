@@ -73,6 +73,7 @@ __all__ = [
     "kimi_login_command",
     "kimi_repo_config_issue",
     "kimi_signed_in",
+    "kimi_terminal_auth",
     "kimi_signed_out",
     "kimi_home_unreadable_message",
     "kimi_signed_out_refusal",
@@ -394,25 +395,67 @@ def kimi_home_dir() -> Path:
     return Path(os.path.realpath(str(config_dir()))) / KIMI_HOME_LEAF
 
 
-def kimi_login_command(home: Path | str | None = None, shell: str | None = None) -> str:
+def kimi_terminal_auth(initialize_result: object) -> tuple[str, ...]:
+    """Kimi's own sign-in invocation, ``(command, *args)``, from its ``initialize`` answer, or ``()``.
+
+    Read from ``authMethods[0]._meta["terminal-auth"]`` (observed on 2.7.2: ``command`` is the
+    binary Kimi runs as, ``args`` is ``["login"]``). It is the one spelling that works where a
+    bare ``kimi`` is not on PATH (a Windows npm prefix). Anything not plain text is ignored, so
+    the caller falls back to the bare command.
+    """
+    methods = initialize_result.get("authMethods") if isinstance(initialize_result, dict) else None
+    meta = methods[0].get("_meta") if isinstance(methods, list) and methods else None
+    auth = meta.get("terminal-auth") if isinstance(meta, dict) else None
+    if not isinstance(auth, dict):
+        return ()
+    command, args = auth.get("command"), auth.get("args")
+    if not isinstance(command, str) or not isinstance(args, list):
+        return ()
+    parts = (command, *args)
+    if not all(isinstance(p, str) and p and p.isprintable() for p in parts):
+        return ()
+    if command.lower().endswith((".mjs", ".js")):
+        return ("node", *parts)
+    return parts
+
+
+def kimi_login_command(
+    home: Path | str | None = None,
+    shell: str | None = None,
+    terminal_auth: tuple[str, ...] = (),
+) -> str:
     """The one command that signs Crew's Kimi home in: a device login of its own, for *shell*.
 
     *shell* is ``posix``, ``powershell`` or ``cmd``; by default the one this host's terminal
     most likely is. ``--region global`` is always passed: ``kimi login`` defaults to the
     mainland-China site and a global account cannot sign in there. One fixed region is the
     simplest; a mainland account can run the command with ``--region cn`` instead.
+
+    *terminal_auth* (:func:`kimi_terminal_auth`) replaces the bare ``kimi login`` with the
+    invocation Kimi itself reported, for a host where ``kimi`` is not on PATH.
     """
     path = str(home or kimi_home_dir())
     shell = shell or ("powershell" if os.name == "nt" else "posix")
     if shell == "powershell":
-        return f"$env:KIMI_CODE_HOME='{path.replace(chr(39), chr(39) * 2)}'; {_LOGIN}"
+        login = _LOGIN
+        if terminal_auth:
+            first, *rest = map(_ps_quote, terminal_auth)
+            login = " ".join(["&", first, *rest, _REGION])
+        return f"$env:KIMI_CODE_HOME={_ps_quote(path)}; {login}"
     if shell == "cmd":
+        login = " ".join([*(f'"{part}"' for part in terminal_auth), _REGION])
         # Quoted whole, so a space in the path is not part of the command and none trails it.
-        return f'set "KIMI_CODE_HOME={path}" && {_LOGIN}'
-    return f"KIMI_CODE_HOME={shlex.quote(path)} {_LOGIN}"
+        return f'set "KIMI_CODE_HOME={path}" && {login if terminal_auth else _LOGIN}'
+    login = " ".join([*map(shlex.quote, terminal_auth), _REGION])
+    return f"KIMI_CODE_HOME={shlex.quote(path)} {login if terminal_auth else _LOGIN}"
 
 
-_LOGIN = "kimi login --region global"
+def _ps_quote(part: str) -> str:
+    return "'" + part.replace("'", "''") + "'"
+
+
+_REGION = "--region global"
+_LOGIN = f"kimi login {_REGION}"
 
 
 def kimi_signed_in(home: Path) -> bool:
@@ -429,10 +472,14 @@ def kimi_signed_in(home: Path) -> bool:
         return False
 
 
-def kimi_signed_out_message(home: Path | str | None = None) -> str:
+def kimi_signed_out_message(
+    home: Path | str | None = None, terminal_auth: tuple[str, ...] = ()
+) -> str:
     """The remedy for a Crew Kimi home with no (or an expired) sign-in."""
     shells = ("powershell", "cmd") if os.name == "nt" else ("posix",)
-    commands = " or ".join(f"`{kimi_login_command(home, shell)}`" for shell in shells)
+    commands = " or ".join(
+        f"`{kimi_login_command(home, shell, terminal_auth)}`" for shell in shells
+    )
     return (
         "Kimi Code CLI is not signed in for Kiro Crew. Kiro Crew runs Kimi out of its own "
         "home with its own sign-in, so your own kimi login is not used (sharing one would "
@@ -441,7 +488,7 @@ def kimi_signed_out_message(home: Path | str | None = None) -> str:
     )
 
 
-def kimi_signed_out_refusal(home: Path | None = None) -> str:
+def kimi_signed_out_refusal(home: Path | None = None, terminal_auth: tuple[str, ...] = ()) -> str:
     """The refusal for a handshake that reports Kimi signed out. Blocking (one directory read).
 
     Kimi shows the signed-out UI both when its home holds no sign-in and when it cannot
@@ -452,7 +499,7 @@ def kimi_signed_out_refusal(home: Path | None = None) -> str:
     home = home or kimi_home_dir()
     try:
         if not kimi_signed_in(home):
-            return kimi_signed_out_message(home)
+            return kimi_signed_out_message(home, terminal_auth)
     except OSError:
         return kimi_home_unreadable_message(home)
     return (

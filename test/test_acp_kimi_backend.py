@@ -744,6 +744,20 @@ def test_a_signed_out_session_is_refused_before_its_first_prompt() -> None:
     assert "kimi login" in str(raised.value)
 
 
+def test_the_signed_out_refusal_uses_the_sign_in_command_kimi_reports(
+    tmp_path, monkeypatch
+) -> None:
+    monkeypatch.setenv("KIROCREW_HOME", str(tmp_path))
+    client = AcpClient(acp_backend=KIMI)
+    client._acp_config_options = _session_new("signed-out-live")["configOptions"]
+    client._initialize_result = {
+        "authMethods": [{"_meta": {"terminal-auth": {"command": "/k/main.mjs", "args": ["login"]}}}]
+    }
+    with pytest.raises(AcpNoModelProvider) as raised:
+        client._refuse_harness_default_model()
+    assert "node /k/main.mjs login --region global" in str(raised.value)
+
+
 # ── Node.js floor ────────────────────────────────────────────────────────────
 
 
