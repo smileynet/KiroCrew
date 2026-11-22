@@ -16,6 +16,7 @@ from kiro_crew.agent_sdk.backends import (
     ACP_BACKEND_COPILOT,
     ACP_BACKEND_DEEPSEEK,
     ACP_BACKEND_GOOSE,
+    ACP_BACKEND_KIMI,
     ACP_BACKEND_OPENCODE,
     ACP_BACKEND_STRANDS,
 )
@@ -41,6 +42,7 @@ def _read(name: str) -> str:
         (ACP_BACKEND_ANTIGRAVITY, Disposition.NO_CHANNEL),
         (ACP_BACKEND_CLAUDE, Disposition.NO_CHANNEL),
         (ACP_BACKEND_CODEX, Disposition.NO_CHANNEL),
+        (ACP_BACKEND_KIMI, Disposition.NO_CHANNEL),
         (ACP_BACKEND_COPILOT, Disposition.WITHHELD),
         (ACP_BACKEND_DEEPSEEK, Disposition.WITHHELD),
     ],
@@ -51,7 +53,7 @@ def test_hooks_disposition_per_mirror_matches_the_spec_fields_page(backend, disp
     assert "`hooks` is `no-channel` on all four" not in doc
     assert (
         "`hooks` is `translated` on `goose`, `opencode` and `strands`, where Crew's\n"
-        "  turn loop fires it; it is `no-channel` on `claude`, `codex` and `antigravity`\n"
+        "  turn loop fires it; it is `no-channel` on `claude`, `codex`, `antigravity` and `kimi`\n"
         "  and withheld on `deepseek` and `copilot`." in doc
     )
 
