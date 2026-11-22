@@ -30,7 +30,7 @@ each decision still waiting on a live capture). Seven things are its own:
   config watcher is off by ``KIMI_CODE_WATCH=0``, and an inherited
   ``KIMI_CODE_TRUST_WORKSPACE`` is stripped.
 * **A project's own ``.kimi-code/`` directory is refused.** It can hold a local
-  config, ``mcp.json``, hooks and permission ``allow`` rules, none of which Crew
+  config, ``mcp.json`` and permission ``allow`` rules, none of which Crew
   approved (:func:`kimi_repo_config_issue`).
 """
 
@@ -513,13 +513,16 @@ def prepare_kimi_home() -> str:
 def kimi_repo_config_issue(work_dir: object) -> str:
     """Why a Kimi Code session must not start in *work_dir*, or ``""``. Blocking.
 
-    A project ``.kimi-code`` can hold a local config, ``mcp.json``, ``[[hooks]]`` and
-    ``[[permission.rules]]`` allow rules; any of them could run or pre-approve a tool
-    without Kiro Crew's approval. Refused on presence, in the working directory and
-    every parent up to its git root or the user's home (never ``~/.kimi-code`` or ``KIMI_CODE_HOME``, which are Kimi's own home), along the path as given AND as resolved, with
-    Copilot's walk. A link or an unreadable entry counts as present (``lexists``).
-    TODO(capture): whether Kimi's workspace-trust prompt, which a headless ACP session
-    cannot answer, already stops these files; until measured, refuse.
+    A project ``.kimi-code`` can hold ``mcp.json``, ``local.toml`` and ``[[permission.rules]]``
+    allow rules; any of them could run or pre-approve a tool without Kiro Crew's approval.
+    Hooks are NOT among them: Kimi 2.7.2 reads hooks from user-level config only
+    (``docs/en/customization/hooks.md:55``, "no project-level hook file"). Refused on
+    presence, in the working directory and every parent up to its git root or the user's home
+    (never ``~/.kimi-code`` or ``KIMI_CODE_HOME``, which are Kimi's own home), along the path
+    as given AND as resolved, with Copilot's walk. A link or an unreadable entry counts as
+    present (``lexists``).
+    Kimi's workspace trust gates project MCP and project permission rules, but a headless
+    ACP session cannot answer its prompt and that was not measured, so the refusal stays.
     """
     if not work_dir:
         return ""
