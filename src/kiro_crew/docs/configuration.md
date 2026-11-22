@@ -736,14 +736,14 @@ run.
 
 The profile is set on the agent's harness process itself, not only on the commands
 the agent runs: kiro-cli, KAS, Claude Code, Codex, OpenCode, Pi, Goose, DeepSeek,
-Copilot and Antigravity all start with it. A harness that signs its own model calls through the AWS credential chain
+Copilot, Antigravity and Kimi Code all start with it. A harness that signs its own model calls through the AWS credential chain
 signs them with the bound profile too. Claude Code set up for Amazon Bedrock
 (`CLAUDE_CODE_USE_BEDROCK=1`) is one, and the bound account then needs access to the
 Bedrock model. Under the `strict` and `cc` sandbox modes `~/.aws` is hidden from
 the agent (`cc` keeps a read-only `~/.aws/config`), so there a profile that needs
 `~/.aws/credentials` or the SSO cache does not resolve for the harness either.
 kiro-cli and KAS sign in with Kiro's own login, and Codex,
-OpenCode, Pi, Goose, DeepSeek, Copilot and Antigravity call whichever provider their own configuration names. Kiro
+OpenCode, Pi, Goose, DeepSeek, Copilot, Antigravity and Kimi Code call whichever provider their own configuration names. Kiro
 Crew does not check whether any of them also reads `AWS_PROFILE` for its model calls.
 
 A profile name must be 1 to 128 letters, digits, `_`, `.`, `+` or `-`, and must not
