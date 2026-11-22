@@ -221,6 +221,15 @@ BENIGN_PACKAGE_SPAWNS: frozenset[str] = frozenset(
         # from a worker thread, never the event loop --
         # ``test/test_acp_pi_node_guard.py`` pins the wrap, the order and the thread.
         "acp/harness/pi_node.py::_node_version",
+        # Kimi's Node-engine probe, the same shape as the pi probe above. ONE
+        # fixed argv -- the ``node`` that ``shutil.which`` finds on the gateway's own
+        # PATH plus the literal ``--version`` -- no shell, a 5s timeout, no stdin
+        # input, and stdout read for a version alone. Nothing in it comes from an
+        # agent, a turn or a project: it runs from the gateway's launch context
+        # (``acp/harness/kimi.py::kimi_node_found``, once before a spawn and once
+        # for the status card), before any session work dir exists, so there is no
+        # session sandbox to wrap it in. It runs only for an npm-installed Kimi.
+        "acp/harness/kimi.py::kimi_node_found",
         # The codex host-binary version probe, the same shape as the opencode
         # version probe above. ONE fixed argv -- the host ``codex`` the harness
         # resolved (mise, then the augmented PATH) plus the literal ``--version``
