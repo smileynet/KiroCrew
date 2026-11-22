@@ -1042,7 +1042,8 @@ class TestSessionHistoryWriteProtected:
         from kiro_crew.security import sensitive_home_dirs
 
         assert not any(
-            p.endswith("/sessions") and not p.startswith(".kimi-code/") for p in sensitive_home_dirs()
+            p.endswith("/sessions") and not p.startswith(".kimi-code/")
+            for p in sensitive_home_dirs()
         )
 
 

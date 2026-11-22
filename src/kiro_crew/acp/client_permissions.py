@@ -368,7 +368,7 @@ async def approve_tool(
         if resolved_id is None:
             resolved_id = OPTION_ALLOW_ALWAYS if always else OPTION_ALLOW_ONCE
     if self.backend == ACP_BACKEND_KIMI and resolved_id == KIMI_OPTION_APPROVE_ALWAYS:
-        # A caller naming Kimi's own id for it (the event no longer offers it) gets the once id.
+        # A caller naming Kimi's own id for it (the event does not offer it) gets the once id.
         resolved_id = KIMI_OPTION_APPROVE_ONCE
     if once_only:
         # Copilot CLI's allow-always stops it asking about that tool for the rest

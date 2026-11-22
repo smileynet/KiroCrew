@@ -9,7 +9,6 @@ CLI 2.7.2, ``reports/kimi-levers-acp.md``).
 from __future__ import annotations
 
 import json
-import os
 import tomllib
 from pathlib import Path
 from types import SimpleNamespace

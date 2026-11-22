@@ -61,6 +61,7 @@ from kiro_crew.agent_sdk.tool_gate import KIMI_HOME_LEAF
 from kiro_crew.config.paths import config_dir
 from kiro_crew.owner_only_files import mkdirs_owner_only
 from kiro_crew.sandbox import crew_home_visible_spellings
+from kiro_crew.subprocess_utf8 import UTF8_TEXT
 
 __all__ = [
     "KIMI_AGENT_NAME",
@@ -238,7 +239,7 @@ def kimi_node_found(kimi_bin: str) -> str:
         return "none"
     try:
         out = subprocess.run(  # noqa: S603 -- the node on PATH, fixed argument
-            [node, "--version"], capture_output=True, text=True, timeout=5, check=False
+            [node, "--version"], capture_output=True, timeout=5, check=False, **UTF8_TEXT
         ).stdout.strip()
     except (OSError, subprocess.SubprocessError):
         return ""
@@ -413,8 +414,9 @@ def render_kimi_config(home: str, kept: Mapping[str, object] | None = None) -> s
     home = _pattern_path(home, "Kiro Crew's Kimi home")
     kept = {k: v for k, v in (kept or {}).items() if k in _KEPT_CONFIG_KEYS}
     lines = ['default_permission_mode = "manual"']
-    if isinstance(kept.get("default_model"), str):
-        lines.append(f"default_model = {_toml_str(kept['default_model'])}")
+    default_model = kept.get("default_model")
+    if isinstance(default_model, str):
+        lines.append(f"default_model = {_toml_str(default_model)}")
     lines += ["", "[watch]", "enabled = false"]
     # Deferred, so a server that connects after the profile bind is still offered through
     # ``select_tools`` (spike M1). Needs the child env above and a ``kimi``-protocol provider.
@@ -611,7 +613,7 @@ def prepare_kimi_home() -> str:
         )
     if os.path.lexists(home / "mcp.json"):
         # Crew's MCP servers arrive on the ``session/new`` array. Kimi also reads this file, and
-        # ``mcp__*`` is no longer in ``[tools] disabled``, so a server named here would be offered
+        # ``mcp__*`` is not in ``[tools] disabled``, so a server named here would be offered
         # with none of Crew's say.
         raise AcpToolGateUnroutable(
             f"Kiro Crew's Kimi home holds an mcp.json ({home / 'mcp.json'}), which would mount "
