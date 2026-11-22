@@ -48,8 +48,8 @@ import subprocess
 import tempfile
 import tomllib
 from collections.abc import Mapping
-from typing import Any
 from pathlib import Path
+from typing import Any
 from urllib.parse import urlsplit
 
 from kiro_crew import acp_tool_gate
@@ -478,7 +478,7 @@ def kimi_terminal_auth(initialize_result: object) -> tuple[str, ...]:
 
 #: cmd metacharacters and ``%``; PowerShell's typographic quotes (U+2018 to U+201B, which it
 #: reads as quote marks), backtick and ``$``; and the plain quote.
-_TERMINAL_AUTH_HOSTILE = re.compile("[\"%&|<>^`$\u2018-\u201b]")
+_TERMINAL_AUTH_HOSTILE = re.compile('["%&|<>^`$\u2018-\u201b]')
 _TERMINAL_AUTH_COMMANDS = frozenset({"kimi", "kimi.cmd", "kimi.exe", "main.mjs"})
 
 

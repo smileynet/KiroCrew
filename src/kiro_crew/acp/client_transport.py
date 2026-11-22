@@ -91,9 +91,9 @@ from kiro_crew.security import redact_credentials, redact_exfiltration_urls
 if TYPE_CHECKING:
     from kiro_crew.acp.client import AcpClient
 
-#: The client's own logger: this code logged under that name before the split.
 _HIDDEN_CWD_STDERR = re.compile(r"EPERM.*uv_cwd|uv_cwd.*EPERM", re.IGNORECASE)
 
+#: The client's own logger: this code logged under that name before the split.
 logger = logging.getLogger("kiro_crew.acp.client")
 
 _R = TypeVar("_R")

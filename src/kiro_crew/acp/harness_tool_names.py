@@ -352,7 +352,8 @@ HARNESS_UNASKED_TOOL_IDS: dict[str, frozenset[str]] = {
     ),
     # Kimi Code CLI 2.7.2 under Crew's own home (``acp.harness.kimi``): ``Write``, ``Edit`` and
     # ``Read`` ask by rule, ``Bash`` asks by default, and ``WebSearch``, ``FetchURL``,
-    # ``ReadMediaFile``, ``Grep``, ``Glob`` and MCP tools are removed from the tool list. What
+    # ``ReadMediaFile``, ``Grep`` and ``Glob`` are removed from the tool list (MCP tools stay, as
+    # deferred tools). What
     # still completes with no request is Kimi's own default-approve list
     # (``permissionPolicy/policies/default-tool-approve.ts``) minus those: the row names only
     # the tools of it that touch no file, start no process and reach no network. Left OUT, so

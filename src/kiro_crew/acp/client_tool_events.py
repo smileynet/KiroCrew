@@ -46,7 +46,6 @@ from kiro_crew.acp._dispatch import (
     tool_call_content_text,
 )
 from kiro_crew.acp.client_timeouts import _SEL_AUDIT_TIMEOUT_SECONDS
-from kiro_crew.acp.harness.kimi import kimi_command_from_update
 from kiro_crew.acp.harness.copilot import (
     COPILOT_IDENTITY_OVERFLOW,
     COPILOT_IDENTITY_RECORDS_MAX,
@@ -811,6 +810,8 @@ def _note_kimi_shell_command(client: AcpClient, tool_use_id: str, update: dict) 
     """
     if update.get("rawInput") or client._tool_call_is_shell.get(tool_use_id) is not True:
         return
+    from kiro_crew.acp.harness.kimi import kimi_command_from_update
+
     command = kimi_command_from_update(update)
     if not command:
         return
