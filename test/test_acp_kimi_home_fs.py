@@ -341,6 +341,12 @@ def test_unknown_provider_and_model_sub_keys_are_dropped() -> None:
     assert config["thinking"] == {"enabled": True}
 
 
+def test_a_plain_top_level_thinking_is_dropped_without_raising() -> None:
+    # Kimi 2.7.2's `thinking` is a table; the plain form (`default_thinking`) is not a setting.
+    config = tomllib.loads(kimi_mod.render_kimi_config("/crew/kimi-home", {"thinking": True}))
+    assert "thinking" not in config
+
+
 def test_the_config_is_written_through_a_unique_temp_file(tmp_path: Path, monkeypatch) -> None:
     home = _crew(tmp_path, monkeypatch)
     _sign_in(home)
@@ -848,6 +854,15 @@ _KIMI_ROW = {
     "select_tools",
     "GetGoal",
 }
+
+
+def test_kimi_stays_off_the_shared_acp_runtime() -> None:
+    # Not reachable: Kimi's `approve_always` is only downgraded in `client_permissions`. If Kimi
+    # ever joins the set, add the `approve_always` -> `approve_once` downgrade in
+    # `session_handle_permissions` first (Kimi rejects an unknown option id: `approval.ts:74-85`).
+    from kiro_crew.agent_sdk.backends_sessions import ACP_BACKENDS_ACP_RUNTIME
+
+    assert KIMI not in ACP_BACKENDS_ACP_RUNTIME
 
 
 def test_the_row_holds_read_only_tools_and_nothing_that_writes_runs_or_reaches_out() -> None:
