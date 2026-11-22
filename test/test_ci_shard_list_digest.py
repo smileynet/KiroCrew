@@ -414,9 +414,18 @@ def test_a_run_that_named_no_digest_admits_no_shard_holding_a_list(
 
 @pytest.mark.parametrize("path", sorted(PATHS))
 def test_a_shard_holding_no_list_fails_when_the_run_has_one(run: Run, corpus, path: str) -> None:
-    names = random.Random(f"absent {path}").sample(corpus, 12)
-    job = _start(run, path, names)
     kind = PATHS[path][2]
+    pool = corpus
+    if kind == "gates":
+        # With the gate list emptied every name below is a changed leaf file, and one
+        # past the Windows pinned-heavy cap runs the full suite instead of a leaf run,
+        # which is not the path under test. Draw from the files that cap does not count,
+        # so the sample does not move with the corpus.
+        lines = (ROOT / "scripts" / "ci_file_shard_pins_windows.txt").read_text().splitlines()
+        pinned = {f[1] for f in map(str.split, lines) if len(f) == 2 and not f[0].startswith("#")}
+        pool = [name for name in corpus if name not in pinned]
+    names = random.Random(f"absent {path}").sample(pool, 12)
+    job = _start(run, path, names)
     if kind == "gates":
         run.changes["leaf_gates"] = ""
     # Once with a selector that fails and once with one that finds nothing.
