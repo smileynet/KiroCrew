@@ -148,14 +148,15 @@ def test_the_config_is_the_live_tested_one() -> None:
     # Crew's own MCP servers are offered as deferred tools (spike M1), so ``mcp__*`` is not disabled.
     assert config["mcp"] == {"default_deferred": True}
     assert not any(tool.startswith("mcp__") for tool in kimi_mod.KIMI_DISABLED_TOOLS)
-    assert set(kimi_mod.KIMI_DISABLED_TOOLS) == {
+    # The tools that read or reach the network without asking stay off; a later addition is fine.
+    assert {
         "WebSearch",
         "FetchURL",
         "ReadMediaFile",
         "Grep",
         "Glob",
         "Skill",
-    }
+    } <= set(kimi_mod.KIMI_DISABLED_TOOLS)
 
 
 def test_a_home_mcp_json_refuses_the_spawn(tmp_path, monkeypatch) -> None:
