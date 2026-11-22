@@ -251,8 +251,7 @@ ACP_BACKENDS_ACP_RUNTIME = frozenset({ACP_BACKEND_KIRO, ACP_BACKEND_KAS, ACP_BAC
 # its own identity the way kas and codex do today -- the exact bug this fact
 # exists to let a caller avoid.
 # mimocode is a member: ``MimoCodeLaunch`` is its entry in ``_PROCESS_ADAPTERS``.
-# kimi is a member for the same code fact (``KimiLaunch``); that makes it spawnable, not
-# selectable (it is in the test file's ``NOT_SHIPPED_SELECTABLE`` set).
+# kimi is a member for the same code fact (``KimiLaunch``).
 ACP_BACKENDS_ACP_CLIENT_SPAWNABLE = frozenset(
     {
         ACP_BACKEND_KIRO,

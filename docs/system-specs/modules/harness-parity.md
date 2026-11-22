@@ -6,12 +6,12 @@ growing set of adapted ones: Claude Code (`ACP_BACKEND_CLAUDE`), `KAS`
 (`ACP_BACKEND_KAS`), Codex (`ACP_BACKEND_CODEX`), OpenCode
 (`ACP_BACKEND_OPENCODE`), MiMo Code (`ACP_BACKEND_MIMOCODE`), Pi (`ACP_BACKEND_PI`),
 goose (`ACP_BACKEND_GOOSE`), DeepSeek Harness (`ACP_BACKEND_DEEPSEEK`), GitHub Copilot CLI
-(`ACP_BACKEND_COPILOT`), Strands (`ACP_BACKEND_STRANDS`) and Google Antigravity
-(`ACP_BACKEND_ANTIGRAVITY`), plus whatever a bring-your-own (BYO) adapter registers
+(`ACP_BACKEND_COPILOT`), Strands (`ACP_BACKEND_STRANDS`), Google Antigravity
+(`ACP_BACKEND_ANTIGRAVITY`) and Kimi Code CLI (`ACP_BACKEND_KIMI`), plus whatever a bring-your-own (BYO) adapter registers
 next.
 
-Kiro, Claude Code, KAS, Strands, Codex, OpenCode, MiMo Code, Pi, goose, DeepSeek, Copilot
-and Antigravity are selectable on a plain public build. Claude Code in particular is
+Kiro, Claude Code, KAS, Strands, Codex, OpenCode, MiMo Code, Pi, goose, DeepSeek, Copilot,
+Antigravity and Kimi are selectable on a plain public build. Claude Code in particular is
 a shipped harness and not a dormant seam: `acp/harness/claude.py` owns the
 whole Claude launch and the adapter is a public npm package, so leaving it out
 of the baseline would remove only the switch, never a capability. Whether the binaries are INSTALLED on a given machine is a different

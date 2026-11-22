@@ -36,12 +36,7 @@ FIELD = "agent.acp_backend"
 #: exclusion rather than a defect, and it earns its place by naming what the id fails.
 #: An id whose tool calls bypass the PreToolUse gate stays out until its routing is
 #: verified (e.g. ``Routing.VERIFIED_GATE_EXTENSION``).
-#:
-#: ``ACP_BACKEND_KIMI``: dormant. Stages 1-6 are done, but its permission mode id,
-#: capability sets and signed-out text need a live ``kimi acp`` capture that does not
-#: exist yet (the Kimi worked example in harness-onboarding.md lists each
-#: ``pending capture`` decision), and the MCP projection (Stage 7) is undecided.
-NOT_SHIPPED_SELECTABLE: frozenset = frozenset({ACP_BACKEND_KIMI})
+NOT_SHIPPED_SELECTABLE: frozenset = frozenset()
 
 
 @pytest.fixture
@@ -173,6 +168,7 @@ def test_baseline_ships_every_known_backend():
             ACP_BACKEND_COPILOT,
             ACP_BACKEND_STRANDS,
             ACP_BACKEND_MIMOCODE,
+            ACP_BACKEND_KIMI,
         ]
     )
     assert baseline == sorted(acp_backends.ACP_BACKENDS_KNOWN - NOT_SHIPPED_SELECTABLE)

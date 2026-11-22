@@ -522,9 +522,9 @@ ACP_BACKEND_ANTIGRAVITY = "antigravity"
 # Moonshot's Kimi Code CLI (npm ``@moonshot-ai/kimi-code``, command ``kimi``): a single
 # binary that serves ACP itself (``kimi acp``). NOT the archived Python ``kimi-cli``,
 # which also installs a ``kimi`` command and also answers ``kimi acp``; the handshake
-# tells them apart by ``agentInfo.name``. DORMANT: it can be spelled and launched but
-# is not in ``BASELINE_SELECTABLE_BACKENDS`` until its live captures exist (see the
-# Kimi worked example in docs/system-specs/modules/harness-onboarding.md).
+# tells them apart by ``agentInfo.name``. Selectable: it is in
+# ``BASELINE_SELECTABLE_BACKENDS`` (see the Kimi worked example in
+# docs/system-specs/modules/harness-onboarding.md for the evidence and the accepted rows).
 ACP_BACKEND_KIMI = "kimi"
 # The kiro-cli backend is spelled as the empty string throughout, so name it
 # rather than leaving every call site to infer it from "not claude".
@@ -745,6 +745,7 @@ BASELINE_SELECTABLE_BACKENDS: FrozenSet[str] = frozenset(
         ACP_BACKEND_COPILOT,
         ACP_BACKEND_MIMOCODE,
         ACP_BACKEND_ANTIGRAVITY,
+        ACP_BACKEND_KIMI,
     }
 )
 

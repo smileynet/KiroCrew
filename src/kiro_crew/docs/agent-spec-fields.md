@@ -73,11 +73,11 @@ seam spawned (`src/kiro_crew/agent_sdk/provider_identity.py`,
 | claude-agent-acp harness | `acp_backend="claude"` | not as a spec file — Crew projects field by field | `providers/mirrors/claude_code.py` is the per-field ruling; [How the other backends consume a spec](#how-the-other-backends-consume-a-spec) is the table |
 
 These rows are different surfaces, not different backends.
-`src/kiro_crew/agent_sdk/backends.py` names twelve (`""`, `kas`, `claude`, `codex`,
-`opencode`, `pi`, `goose`, `deepseek`, `copilot`, `strands`, `antigravity`, `mimocode`),
+`src/kiro_crew/agent_sdk/backends.py` names thirteen (`""`, `kas`, `claude`, `codex`,
+`opencode`, `pi`, `goose`, `deepseek`, `copilot`, `strands`, `antigravity`, `mimocode`, `kimi`),
 and only `kas` reads the markdown form (`ACP_BACKENDS_MARKDOWN_AGENT_SPECS`).
 [How the other backends consume a spec](#how-the-other-backends-consume-a-spec)
-below is what happens to the other nine.
+below is what happens to the other ten.
 
 These two are separate rows because they are separate axes, and only one is
 dormant. `provider=claude_code` is dormant in the public build, whose config
@@ -97,8 +97,8 @@ you cannot add your own keys to a spec.
 
 ## How the other backends consume a spec
 
-The nine backends missing from the table above — `codex`, `opencode`, `goose`,
-`pi`, `deepseek`, `copilot`, `strands`, `antigravity` and `mimocode` — receive **no agent definition in any shape**: no
+The ten backends missing from the table above — `codex`, `opencode`, `goose`,
+`pi`, `deepseek`, `copilot`, `strands`, `antigravity`, `mimocode` and `kimi` — receive **no agent definition in any shape**: no
 `--agent`, and no spec written anywhere, so nothing reads a spec AS a spec
 there. That is not the same as receiving nothing. On most of them individual
 fields still arrive, one at a time, through whichever channel that harness reads
@@ -142,8 +142,8 @@ Four cases, and the difference between them is the whole answer:
   the sub-agent auto-approves what the hook covers, as it does for the chat's
   own agent. The sub-agent's MCP servers get your ssh-agent socket when the
   chat's own agent's servers do.
-- **The nine MIRRORED harnesses get individual fields, decided one by one.**
-  `claude`, `codex`, `opencode`, `goose`, `deepseek`, `copilot`, `strands`, `antigravity` and `mimocode`. Crew reads the spec and a mirror
+- **The ten MIRRORED harnesses get individual fields, decided one by one.**
+  `claude`, `codex`, `opencode`, `goose`, `deepseek`, `copilot`, `strands`, `antigravity`, `mimocode` and `kimi`. Crew reads the spec and a mirror
   rules on each field. `providers/mirrors/base.py` is the vocabulary: `Concern`
   is the closed list of things a spec expresses, so adding one obliges every
   backend to answer it; `Disposition` is the four answers (`delivered`,
@@ -155,7 +155,7 @@ Four cases, and the difference between them is the whole answer:
   `session/set_config_option` (`agent_sdk/backends_models.py`,
   `ACP_BACKENDS_MODEL_VIA_CONFIG_OPTION`), and `prompt` arrives as ordinary
   context text. `registry.py` records this as `broker-only`: `MIRRORS` contains
-  the nine harnesses above, while `PROJECTIONS` records all twelve backends.
+  the ten harnesses above, while `PROJECTIONS` records all thirteen backends.
 
 **Where the mirror runs.** At session establishment, on both ACP seams, over the
 shared translation in `acp/session_mcp.py` (`session_mcp_projection`):
@@ -195,6 +195,7 @@ underneath.
 | `goose` | `goose.py` | `mcpServers`, the one channel measured as a round trip rather than as an accepted element; `model` [5] | `tools` → the array's allowlist [3]; `disabledTools` → the server is withheld whole, control plane included [7]; `hooks` → fired by Crew's turn loop | as `codex` except `hooks`, with `permissions.defaultMode` carried as `GOOSE_MODE` in the child's environment |
 | `copilot` | `copilot.py` | `mcpServers` (with stdio also carried in its launch file); the harness-advertised model choice | `tools` → the array's allowlist [3]; `disabledTools` → the server is withheld whole, control plane included [7] | `permissions.defaultMode` → fixed by `allow_all=off`; `prompt`, `resources`, `autoApprove` and `hooks` withheld |
 | `antigravity` | `antigravity.py` | `mcpServers` through the session array; `model` and `thinking_level` config options | `tools` → the array's allowlist [3]; `disabledTools` → the server is withheld whole, control plane included [7] | `permissions.defaultMode` → fixed by `mode=default`; `prompt`, `resources`, `autoApprove` withheld; `hooks` — no channel: Crew's turn loop fires every event but `preToolUse`, because file reads run without a permission request; `toolsSettings` — no channel [11] |
+| `kimi` | `kimi.py` | `mcpServers` through the session array (offered to the model as deferred tools) | `tools` → the array's allowlist [3]; `disabledTools` → the server is withheld whole, control plane included [7] | `model`, `availableModels`, `autoApprove`, `permissions.defaultMode`, `prompt` and `resources` withheld (the mode is fixed at `default`; `approve_always` is never sent); `hooks` and `toolsSettings` — no channel [11] |
 | `pi` | none | — | — | no projection of the spec — kind `broker-only` [8]; `model` and `prompt` still arrive [9] |
 | `deepseek` | `deepseek.py` | `mcpServers` through the session array; `model` through the lane profile before `session/new` | `tools` → the array's allowlist [3]; `disabledTools` → the server is withheld whole, control plane included [7] | `availableModels`, `autoApprove`, `permissions.defaultMode`, `prompt`, `resources` and `hooks` withheld |
 | `strands` | `strands.py` | `mcpServers`, by the `--mcp-config` launch file, never the wire [10]; `model`, as the `--model` launch argument [10] | `tools` → the array's allowlist [3]; `disabledTools` → the server is withheld whole, control plane included [7]; `hooks` → fired by Crew's turn loop | `availableModels` — no vocabulary advertised; `autoApprove` and `permissions.defaultMode` — gate-preserving (Crew's gate module asks for every call); `prompt` — context-instead [10]; `resources` — no-reader [6]; `toolsSettings` — no channel [11] |

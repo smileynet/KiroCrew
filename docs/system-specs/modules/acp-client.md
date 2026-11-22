@@ -1275,7 +1275,7 @@ validated at config load (`_normalize_acp_backend`, harness-parity H3), and an
 unknown id fails later at the harness or launch lookup. The launch record comes
 from `agent_sdk/backends_launch.py`. Current ids are `""`
 (kiro-cli), `"kas"`, `"claude"`, `"codex"`, `"opencode"`, `"pi"`, `"goose"`,
-`"deepseek"`, `"copilot"`, `"antigravity"`, `"strands"` and `"mimocode"`; public-build selectability is a
+`"deepseek"`, `"copilot"`, `"antigravity"`, `"strands"`, `"mimocode"` and `"kimi"`; public-build selectability is a
 separate registry. The complete launch and host-capability table is in
 [agent-host-contract.md](agent-host-contract.md#column-meaning). The Kiro,
 Claude and Antigravity launches need additional detail here:

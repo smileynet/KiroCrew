@@ -1188,11 +1188,12 @@ contribution must not describe them as accepted.
 
 ## Worked example: Kimi
 
-The run to read for a **dormant** landing: Stages 1 to 6 complete, one harness that
-cannot yet be chosen, and every decision that needs a live capture written down as
-pending rather than guessed. Moonshot's **Kimi Code CLI** (npm `@moonshot-ai/kimi-code`
-`2.7.2`, command `kimi`, ACP through `kimi acp`) is in `ACP_BACKENDS_KNOWN` and is named
-in `NOT_SHIPPED_SELECTABLE`. It is *not* the archived Python `kimi-cli`, which also
+The run to read for a harness that **landed dormant and was then flipped to selectable**:
+Stages 1 to 6 first, every decision that needed a live capture written down as pending
+rather than guessed, then live evidence, then the Stage 7 flip. Moonshot's **Kimi Code CLI**
+(npm `@moonshot-ai/kimi-code` `2.7.2`, command `kimi`, ACP through `kimi acp`) is in
+`ACP_BACKENDS_KNOWN` and in `BASELINE_SELECTABLE_BACKENDS`, so it renders in the dashboard
+switch. Native Windows: refused at launch (no sandbox backend); WSL2 works. It is *not* the archived Python `kimi-cli`, which also
 installs `kimi` and also answers `kimi acp`; on a host that ran its installer the two sit
 side by side (`~/.kimi-code/bin/kimi` there is the legacy build), so the handshake, not
 the command name, tells them apart.
@@ -1205,15 +1206,38 @@ named there is `pending capture`.
 
 | Stage | State |
 |---|---|
-| 1 vocabulary | Done: `ACP_BACKEND_KIMI`, `PROVIDER_LABEL_KIMI`, policy name mapped, its own `kimi` model namespace. In `NOT_SHIPPED_SELECTABLE`, not in `BASELINE_SELECTABLE_BACKENDS`. |
+| 1 vocabulary | Done: `ACP_BACKEND_KIMI`, `PROVIDER_LABEL_KIMI`, policy name mapped, its own `kimi` model namespace. Selectable: in `BASELINE_SELECTABLE_BACKENDS` and out of `NOT_SHIPPED_SELECTABLE` (Stage 7). |
 | 2 capability sets | Member of `ACP_BACKENDS_KNOWN`, `ACP_BACKENDS_SELF_SERVED_ACP` (derived from the launch row) and `ACP_BACKENDS_ACP_CLIENT_SPAWNABLE` (a code fact: `KimiLaunch` is registered). Out of every other set, and each of those is `pending capture` or follows from one that is, below. No set was joined on the strength of the docs alone. |
 | 3 spawn path | Done: a self-served `ACP_BACKEND_LAUNCH` row (`kimi acp`, `KIMI_BIN`, install `npm i -g @moonshot-ai/kimi-code@2.7.2`), `acp/harness/kimi.py` (`KimiLaunch`), `acp/client_kimi.py` and `acp/client_kimi_session.py`. The child runs out of a Crew-owned `KIMI_CODE_HOME` and gets `KIMI_DISABLE_TELEMETRY=1` and `KIMI_CODE_NO_AUTO_UPDATE=1` (Option B, below). The handshake refuses an `agentInfo.name` other than `Kimi Code CLI` and any version other than `2.7.2`, which also refuses the legacy kimi-cli. A project `.kimi-code/` directory refuses the session (`kimi_repo_config_issue`). |
 | 4 handshake | Done: `PROTOCOL_VERSION_KIMI`, its own constant, `1`. |
 | 5 auth declaration | Done: `own_credential_file`; `.kimi-code/credentials`, `config.toml`, `logs`, `sessions`, `oauth`, `device_id` and `user-history` on the floor, re-anchored under `KIMI_CODE_HOME`, all seven masked from the child (it runs out of the Crew-owned home instead; `kimi-home` is on the floor and excluded from Kimi's mask alone). The floor names directories, so `sessions/*/wire.jsonl` is fenced as the whole `sessions` directory. `signed_out_signature` is `Authentication required` (`host_auth.py`; Windows `session/new` -32000, live). Linux and macOS answer `session/new` and then a prompt hangs about 60 s with no error (`signed-out-live` fixture), so Crew also reads `kimi_signed_out` (the `thinking` select narrowed to `on`) and refuses a spawn with no credential file. Host-contract column added. |
 | 6 install probe | Done from the launch row. The release is read from the npm manifest and a `kimi` that is not `2.7.2` is reported missing with the pinned command. A build with no manifest (the legacy Python install) reads as unknown and is refused at the handshake. |
 | Routing | `Routing.SESSION_CONFIG`, `("mode", "default")`. Forbidden modes `yolo` and `auto`. The prompt-command allowlist admits compact, help, mcp, status, tasks and usage, so `/yolo`, `/auto`, `/login`, `/goal` and every skill command are refused before the wire. Crew writes the pin with `session/set_config_option` and never calls `session/set_mode`: Kimi 2.7.2's handler runs the same `setMode` with no early return, so it also corrects a `yolo` config that `session/new` reports as `default` (`turn-live-yolo-config`). |
-| 7 selectability | **Not taken**, and Windows is unproven. The MCP projection is a `mirror` over deferred tools (spike M1). Live evidence now: L1 PASS in WSL2 at `efb84f1b9a` (sandboxed Write ask, `fs/write_text_file`, Read, no EPERM), W3 M1a-c (94 `mcp__kirocrew-*` names announced, `select_tools`, an ask with once/reject), W3 X2 (no `Skill`, `Grep`, `Glob`, `WebSearch`, `FetchURL` or `ReadMediaFile` in the model's tool list) and the Mac smoke. B1 (a Crew MCP call returning a real result): both W3 calls came back `internal_secret_missing`, because the masked child could not read the gateway credential; the fix is the agent-socket pickup for `kirocrew-core`, `kirocrew-cron` and `kirocrew-dashboard` (`acp/ipc_pickup.py`), and it is not yet proven by a live gateway-backed call. No native-Windows sandboxed turn was run. |
-| 8 live spill | Partial, dormant. Usage rows are counted (`usage_store._SHARD_COUNTED_HARNESSES`), the dashboard names the harness in all locales (`website/src/api/acpBackend.ts`), and Kimi has a column in every bucket of `agent-host-contract.md`. `session_pid_harness.py` already recognises `node .../bin/kimi acp` through the registry's `kimi` marker on POSIX. Not done because it is not selectable: `configuration.md` and `agent-spec-fields.md` do not list it, since both describe values an operator can set. |
+| 7 selectability | **Taken.** `ACP_BACKEND_KIMI` is in `BASELINE_SELECTABLE_BACKENDS`; `NOT_SHIPPED_SELECTABLE` is empty. The MCP projection is a `mirror` over deferred tools (spike M1). Evidence is the table under "Selectability evidence" below. Native Windows is refused at launch (no sandbox backend); WSL2 works. |
+| 8 live spill | Done with the flip. Usage rows are counted (`usage_store._SHARD_COUNTED_HARNESSES`), the dashboard names the harness in all locales (`website/src/api/acpBackend.ts`), Kimi has a column in every bucket of `agent-host-contract.md`, and `configuration.md` and `agent-spec-fields.md` now list it. `session_pid_harness.py` recognises `node .../bin/kimi acp` through the registry's `kimi` marker on POSIX. |
+
+### Selectability evidence
+
+The flip rests on these runs. Each row names what it proved and what it did not.
+
+| Run | Result |
+|---|---|
+| L1 (WSL2 on flamingdragon, `efb84f1b9a`) | PASS. A sandboxed Write ask, `fs/write_text_file` reached Crew, a Read, no EPERM, the real `~/.kimi-code` untouched |
+| Mac smoke (`kimi-mac-fixes.md`) | 10 PASS. The hidden-cwd refusal and the relocated `kimi-home` carve-out. The masked-path read was indirect only |
+| W3 (live, signed in) | M1a-c PASS: 94 `mcp__kirocrew-*` names announced, `select_tools` loaded, an ask with once and reject. X2: the model's tool list held no `Skill`, `Grep`, `Glob`, `WebSearch`, `FetchURL` or `ReadMediaFile` |
+| B1 (in-gateway, `b1-ingateway-2.md`, `e4b70cca68`) | PASS. `cron_list` returned a real result ("No cron jobs.") through the gateway: `/api/ipc/redeem` granted, `internal_auth /api/crons/tools agent socket capability`, `ipc_session_unbound` 0 |
+
+Accepted rows, none of which blocks the flip:
+
+| Row | Why it is accepted |
+|---|---|
+| Native Windows: refused at launch (no sandbox backend); WSL2 works | Fail-closed. Windows has only unit-level evidence and a handshake on flamingdragon; no sandboxed native-Windows turn exists |
+| B1 caveat: a `wrong secret (received=absent)` denial on `/api/session-tool-policy` before the first `/api/ipc/redeem`, and `session_tool_policy` `agent not resolved` lines | Seen once in the B1 run, off the cron path, which had no denial. Cause not traced and not fixed here. A stub asked once before it held its credential; the tool call itself succeeded |
+| The model finding a Crew tool when the prompt does not name it (S5) | W3 and B1 named the tool. The model is told the names in `<tools_added>`; the failure mode is that tools go unused |
+| Other Crew servers in a Kimi array (panel, work, computer, guide, mate) | Only `kirocrew-core`, `kirocrew-cron` and `kirocrew-dashboard` redeem a pickup. `kirocrew-guide` and `kirocrew-mate` are withheld as for other harnesses, and Kimi is not in `ACP_BACKENDS_MEMBER_CAPABILITIES`, so it has no member dispatch tool |
+| Every Crew MCP call asks | Kimi's ask carries no server and tool split and `approve_always` is stripped, so each call asks the person (a UX cost, not a hole) |
+| Windows sign-in remedy from Kimi's terminal-auth | Refused for hostile values (S2); the bare command is shown instead |
+| N4 (a rewrite reaching a second `session/new` on a kept process) | Pending-capture row below; the home is re-rendered at every spawn and `Write` and `Edit` under it are denied |
 
 ### Option B: a Crew-owned home, so every write reaches the gate
 
@@ -1267,8 +1291,10 @@ experimental flag may change in a later Kimi release; the release pin covers tha
 
 ### Pending capture
 
-Each line is a decision this landing did not take, because the set or field it belongs to
-is decided by a measurement that does not exist yet. Until it does, Kimi stays out.
+Each line is a decision the dormant landing did not take, because the set or field it
+belongs to is decided by a measurement that did not exist yet. Kimi is now selectable: the
+rows still open are accepted, with the rationale in "Selectability evidence" above and the
+row itself.
 
 | Decision | Why it waits | Where the TODO sits |
 |---|---|---|

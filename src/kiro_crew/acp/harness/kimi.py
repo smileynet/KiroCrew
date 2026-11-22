@@ -2,9 +2,8 @@
 
 Kimi Code CLI serves ACP from its own binary (``kimi acp``), so its executable comes
 off the shared self-served ladder (``ACP_BACKEND_LAUNCH``) and there is no adapter
-package. DORMANT: the id can be spelled and launched, but it is not selectable
-(it is in the ``NOT_SHIPPED_SELECTABLE`` set of ``test/test_agent_backend_editable.py``, not in ``BASELINE_SELECTABLE_BACKENDS``; the Kimi worked example in harness-onboarding.md lists
-each decision still waiting on a live capture). Seven things are its own:
+package. Selectable (``BASELINE_SELECTABLE_BACKENDS``); the Kimi worked example in
+harness-onboarding.md holds the evidence and the accepted rows. Seven things are its own:
 
 * **Its permission route is a session config option**, ``mode``, which Crew writes
   ``default`` after ``session/new`` and ``session/load`` and before the first prompt

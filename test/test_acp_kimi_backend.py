@@ -93,9 +93,9 @@ def _mode_update(mode: str) -> JsonRpcMessage:
 # ── dormancy and vocabulary ──────────────────────────────────────────────────
 
 
-def test_kimi_is_known_and_dormant() -> None:
+def test_kimi_is_known_and_selectable() -> None:
     assert KIMI in ACP_BACKENDS_KNOWN
-    assert KIMI not in BASELINE_SELECTABLE_BACKENDS
+    assert KIMI in BASELINE_SELECTABLE_BACKENDS
     assert PROVIDER_LABEL_BY_BACKEND[KIMI] == "kimi"
 
 
