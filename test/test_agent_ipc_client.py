@@ -145,6 +145,29 @@ def test_no_pickup_without_an_agent_socket_or_a_token(bound, monkeypatch):
     assert not bound._pickups
 
 
+def test_a_missing_agent_socket_warns_once_per_backend(bound, monkeypatch, caplog):
+    monkeypatch.setattr(ipc_pickup, "_WARNED_NO_SOCKET", set())
+    monkeypatch.setattr(agent_ipc, "agent_socket_bound", lambda: False)
+    caplog.set_level("WARNING", logger=ipc_pickup.logger.name)
+    _issue(_array(), backend="kimi")
+    _issue(_array(), backend="kimi")
+    warned = [r for r in caplog.records if "internal_secret_missing" in r.getMessage()]
+    assert len(warned) == 1 and "kimi" in warned[0].getMessage()
+    _issue(_array(), backend="codex")
+    assert len([r for r in caplog.records if "internal_secret_missing" in r.getMessage()]) == 2
+
+
+def test_no_warning_when_the_socket_is_bound_or_the_backend_is_not_enforced(
+    bound, monkeypatch, caplog
+):
+    monkeypatch.setattr(ipc_pickup, "_WARNED_NO_SOCKET", set())
+    caplog.set_level("WARNING", logger=ipc_pickup.logger.name)
+    _issue(_array(), backend="kimi")
+    monkeypatch.setattr(agent_ipc, "agent_socket_bound", lambda: False)
+    _issue(_array(), backend="claude")
+    assert "internal_secret_missing" not in caplog.text
+
+
 def test_the_caller_array_is_not_mutated(bound):
     array = _array()
     _issue(array)

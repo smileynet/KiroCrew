@@ -33,6 +33,9 @@ logger = logging.getLogger(__name__)
 #: The Kiro Crew servers that redeem a pickup at startup (``agent_ipc_client``).
 PICKUP_SERVERS: frozenset[str] = frozenset({"kirocrew-core", "kirocrew-cron", "kirocrew-dashboard"})
 
+#: Backends already warned about a missing agent socket, so the warning is once per process.
+_WARNED_NO_SOCKET: set[str] = set()
+
 
 def _launches_server_directly(element: dict[str, Any]) -> bool:
     """Whether *element* starts the named server itself rather than the broker stub.
@@ -86,6 +89,14 @@ def with_ipc_pickups(
     from kiro_crew.dashboard.agent_ipc import agent_socket_bound, issue_pickup
 
     if not agent_socket_bound():
+        if backend not in _WARNED_NO_SOCKET:
+            _WARNED_NO_SOCKET.add(backend)
+            logger.warning(
+                "enforced backend %s has no agent socket in this process: Crew's MCP servers "
+                "get no pickup, so their gateway calls will fail with internal_secret_missing "
+                "(build the session inside the gateway process)",
+                backend,
+            )
         return servers
     out: list[dict[str, Any]] = []
     for element in servers:
