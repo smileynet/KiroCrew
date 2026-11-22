@@ -15,7 +15,7 @@ Instance fields written: ``_activated_model``, ``_drain_mode_reports``, ``_last_
 
 Instance fields read: ``_active_tool_calls``, ``_buffer``, ``_cancel_grace_secs``, ``_cancel_ts``,
 ``_cancelled``, ``_kill_sent``, ``_mcp_report``, ``_mode_frame_awaited``,
-``_native_skill_projection``, ``_process``, ``_session_id``, ``_stderr_lines``,
+``_native_skill_projection``, ``_process``, ``_session_id``, ``_spawn_work_dir``, ``_stderr_lines``,
 ``_stderr_task``, ``_turn_done``, ``memory_mode``.
 """
 
