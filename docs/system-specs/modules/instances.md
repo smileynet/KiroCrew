@@ -540,6 +540,7 @@ cannot drift.
 | `instances.max_recovery_attempts` | `8` | Consecutive self-heal attempts before the tunnel is left disconnected. Below 1 falls back to the default; above `MAX_RECOVERY_ATTEMPTS_CEILING` (100) is clamped with a warning, so a pathological setting cannot turn bounded self-heal into a near-infinite retry loop. |
 | `instances.recover_backoff_max_secs` | `30.0` | Cap on the per-attempt backoff. Non-positive falls back to the default; above `RECOVER_BACKOFF_MAX_CEILING_SECS` (300) is clamped, bounding the worst-case wall-clock recovery window. |
 | `instances.probe_failure_threshold` | `3` | Consecutive health-probe failures before a non-forwarding tunnel is torn down. Below 1 falls back to the default. |
+| `instances.managed_env_endpoint` | `""` | HTTPS base URL of the Kiro managed-environment service (`kiro_crew.managed_env`); plain `http://` only to a loopback host. Read only while the `crew_client` feature preview is on, so never on an LTS build (`managed_env/settings.read_settings`). Empty or malformed, every call raises `SettingsMissing`, which names the key. No route or dashboard entry calls the client yet. |
 
 ```bash
 kirocrew config set instances.warm_set_cap 3
@@ -939,7 +940,10 @@ what its own edit invalidated, and never reopens anything on the user's behalf.
   model sent to the pane in front carries those rows (`relayCrews`: endpoint ID, name, type, the relay's
   state words, last seen, open and current; never the Crew's URL, a token or
   the account), so the
-  switcher an SSH Crew draws lists the Remote Crews too. `mc-native-notify`
+  switcher an SSH Crew draws lists the Remote Crews too. `relayCrewsFailed` says
+  the window's latest read failed (the rows are the last ones loaded, none on a
+  first read), and that switcher then shows the same notice the top bar's group
+  does. `mc-native-notify`
   carries user-visible text, so it is accepted only from a resolved tunnel origin
   and only when every field has exactly the expected type
   (`parseNativeNotifyEnvelope`), with title, body and tag bounded.
@@ -1448,13 +1452,29 @@ token mint, `restart_remote`, the diagnostics probes — therefore goes through
 SSM transport's `aws` child is built from. That helper APPENDS the well-known install dirs
 (`/opt/homebrew/bin`, `/usr/local/bin`) and withholds them for a bare head, so
 the inherited `PATH` keeps first claim on every name and an `ssh` found only in
-those dirs is never exec'd. The SSM transport's `aws` child also drops the
+those dirs is never exec'd. Before building that env, each spawn re-runs the
+provenance walk for `session-manager-plugin` and `aws`, so a dir holding a
+refused copy stays off the child's `PATH` whether or not an SSM check ran first,
+and a repaired copy is back at the next spawn without a restart. The SSM
+transport's `aws` child also drops the
 gateway's Python interpreter settings (`sandbox.without_python_env`), because
 aws-cli v1 is Python; the ssh children keep them, since a `ProxyCommand` can run
 any program of the user's and stripping there would change more than `aws`. When
 the proxy still cannot find its program, the tunnel and mint errors say so and
 name the `PATH` the child was given, instead of the "connection closed" that ssh
-prints afterwards reading as a network drop.
+prints afterwards reading as a network drop. "Cannot find" means ssh exited 255
+and its stderr holds a phrase in `token_mint.PROXY_TOOL_MISSING_SIGNALS`: the SSM
+plugin's "not installed" wording, a POSIX shell's "not found", or Windows
+OpenSSH's `posix_spawnp: No such file or directory` (it starts a `ProxyCommand`
+without a shell). Its `CreateProcessW failed error:2` line is not used, because
+`error:2` also begins unrelated codes such as `error:225`. When that program is a refused
+`session-manager-plugin`, they name its file, the refusal and the fix instead
+(`cloud.ssm.session_manager_plugin_unavailable_message`). For any other
+missing program, a refused plugin or `aws` is named when it is what hid that
+program: the program sits in the refused tool's dir (such as
+`/opt/homebrew/bin`) and that dir is not on the child's `PATH`. The diagnosis
+ladder's `ssh_unreachable` reason adds the same text for a host whose
+`ProxyCommand` runs the plugin.
 
 ### Dev host / home server (primary)
 
@@ -2213,7 +2233,14 @@ auth/transport matchers, which would mislabel an `AccessDenied` as an ssh auth
 failure. The detail it quotes is cut to 200 characters (`_BANNER_DETAIL_MAX_CHARS`),
 except an `ssm:StartSession` denial, which keeps 400
 (`_SSM_DENIAL_DETAIL_MAX_CHARS`) so AWS's one sentence still names the action,
-the resource to grant and the policy gap.
+the resource to grant and the policy gap. A denial whose text names StartSession
+(not, say, a refused AssumeRole) also sets
+`TunnelStatus.error_code = "ssm_start_session_denied"`, kept beside the reason
+after the failed tunnel is dropped (`last_error_code`, read only while
+`last_error` still answers that reason). Settings → Remote Crew shows a plain
+sentence for that code in the row's Why and the Connect failure, with the
+error's own text (ARNs and account IDs included, never redacted) folded under
+it.
 
 Stderr is not the only input. The plugin exits `0` with an empty stderr whether
 the session went idle, the transport was lost, or the session never started, so

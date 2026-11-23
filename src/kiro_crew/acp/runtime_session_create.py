@@ -35,7 +35,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, Mapping
 
 from kiro_crew import session_head
-from kiro_crew.acp import kas_cli_settings, kas_env_launch, runtime_start
+from kiro_crew.acp import kas_approve_for_me, kas_cli_settings, kas_env_launch, runtime_start
 from kiro_crew.acp._dispatch import (
     attach_kas_custom_agents,
     build_session_new_params,
@@ -65,7 +65,9 @@ from kiro_crew.acp.session_handle_agent_turns import AgentTurnQueue
 from kiro_crew.acp.session_mcp import session_mcp_server_is_disabled
 from kiro_crew.acp.types import (
     ACP_BACKEND_KAS,
+    ACP_BACKEND_KIRO,
     ACP_BACKENDS_ADVERTISED_MODEL_SELECTION,
+    ACP_BACKENDS_APPROVE_FOR_ME,
     ACP_BACKENDS_PRUNE_UNSTARTABLE_MCP,
     METHOD_SESSION_NEW,
     JsonRpcMessage,
@@ -295,6 +297,7 @@ async def create_session(
     session_work_dir = await self._session_work_dir(cwd)
     denied_tools: frozenset[tuple[str, str]] = frozenset()
     zero_tools = False
+    builtin_tools: tuple[str, ...] | None = None
     # Defined for every path, not just the array-building one: a caller that
     # supplied its own array never enters the block below, and the member
     # confirmation asks whether a MIRROR built this session's array.
@@ -333,6 +336,7 @@ async def create_session(
             stub_token = mirrored.stub_token
             denied_tools = mirrored.denied_tools
             zero_tools = mirrored.zero_tools
+            builtin_tools = mirrored.builtin_tools
             mirrored_snapshot = mirrored.derived_spec_snapshot
             consumed_spec = mirrored.agent_spec
             ref_spec = mirrored.ref_spec
@@ -551,7 +555,11 @@ async def create_session(
         )
         # This session's own envelope, built after the array it travels with.
         meta = self._harness.session_meta(
-            harness_state, wire_servers, zero_tools=zero_tools, stub_token=stub_token
+            harness_state,
+            wire_servers,
+            zero_tools=zero_tools,
+            builtin_tools=builtin_tools,
+            stub_token=stub_token,
         )
         if meta is not None:
             params["_meta"] = {**(params.get("_meta") or {}), **meta}
@@ -653,7 +661,11 @@ async def create_session(
                         "the session's settings file was replaced; start the chat again"
                     ) from refusal
                 meta = self._harness.session_meta(
-                    harness_state, wire_servers, zero_tools=zero_tools, stub_token=stub_token
+                    harness_state,
+                    wire_servers,
+                    zero_tools=zero_tools,
+                    builtin_tools=builtin_tools,
+                    stub_token=stub_token,
                 )
                 if meta is not None:
                     params["_meta"] = {**(params.get("_meta") or {}), **meta}
@@ -1139,6 +1151,9 @@ async def _finish_create_session(
     # the shared process.
     try:
         await handle.apply_session_permission_routing()
+        if self.acp_backend in ACP_BACKENDS_APPROVE_FOR_ME:
+            # Before any prompt: the session's approve-for-me reads ``on`` or ``off``.
+            await kas_approve_for_me.settle(handle)
     except Exception:
         await self.terminate_session(session_id)
         raise
@@ -1247,7 +1262,11 @@ async def _finish_create_session(
     elif mode_agent:
         _ids, _current, _adv = parse_session_modes(resp)
         await self.terminate_session(session_id)
-        cause, remedy = await asyncio.to_thread(unavailable_mode_explanation, mode_agent)
+        cause, remedy = await asyncio.to_thread(
+            unavailable_mode_explanation,
+            mode_agent,
+            kiro_cli_engine=self._harness.backend == ACP_BACKEND_KIRO,
+        )
         raise AcpRuntimeError(
             f"Agent mode {mode_agent!r} is not available on this session "
             f"(advertised modes: {_ids or 'none'}); {cause} Refusing to run "

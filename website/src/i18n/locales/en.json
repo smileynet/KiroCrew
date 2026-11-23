@@ -151,7 +151,8 @@
       "not_granted": "This app may not show the browser yet. Approve its browser access on the app's page in Apps.",
       "note_not_sent_not_saved": "Your note was not sent to the Bot, and this browser could not keep a copy. Copy it now: {{note}}",
       "tab_gone": "The Bot's tab is closed, so there is no live page to show.",
-      "app_off": "This app is turned off, so it can't show the browser. Turn it on in Apps to see the page again."
+      "app_off": "This app is turned off, so it can't show the browser. Turn it on in Apps to see the page again.",
+      "actions": "What the Bot did"
     }
   },
   "apps": {
@@ -4824,7 +4825,7 @@
       "model_list": "Model list",
       "split_down": "Split down",
       "split_right": "Split right",
-      "split_right_d": "Split right (⌘D)",
+      "split_right_d": "Split right ({{shortcut}})",
       "type_to_filter": "Type to filter…",
       "preparing_catch_up": "Preparing your catch-up…"
     },
@@ -5168,7 +5169,8 @@
       "connect_crew": "Connect {{name}}",
       "connected": "Connected",
       "not_connected": "Not connected",
-      "connecting": "Connecting…"
+      "connecting": "Connecting…",
+      "off_domain": "{{setting}} hides the Shared Crews whose addresses aren't under that relay domain. Correct or clear the setting."
     },
     "instancesViewport": {
       "loading_pane": "Loading pane…",
@@ -5392,7 +5394,10 @@
     },
     "matesDock": {
       "load_failed": "Couldn't load your starred bots.",
-      "reorder_failed": "Couldn't save the new order of your bots."
+      "remove_from_sidebar": "Remove from the sidebar",
+      "reorder_failed": "Couldn't save the new order of your bots.",
+      "row_menu": "More actions for {{name}}",
+      "unstar_failed": "Couldn't remove this bot from the sidebar."
     },
     "mcpBrowserModal": {
       "add_server": "Add Server",
@@ -5881,7 +5886,7 @@
       "search_sessions": "Search sessions…",
       "split_down": "Split down",
       "split_right": "Split right",
-      "split_right_d": "Split right (⌘D)",
+      "split_right_d": "Split right ({{shortcut}})",
       "terminal_pane_coming_in_phase_2": "Terminal pane — coming in Phase 2"
     },
     "sessionMoveUndoBar": {
@@ -7070,6 +7075,7 @@
       "backend_refused_notice": "The backend of {{name}} did not start: {{reason}}",
       "action_warnings_disabled": "{{name}} is disabled, but not every step finished. Details: {{warnings}}",
       "action_warnings_enabled": "{{name}} is enabled, but not every step finished. Details: {{warnings}}",
+      "action_warnings_uninstalled": "{{name}} is uninstalled, but not every step finished. Details: {{warnings}}",
       "cancel": "Cancel",
       "category": "Category",
       "confirm_uninstall": "Confirm uninstall",
@@ -7266,7 +7272,7 @@
       "save_failed": "Save failed:",
       "save_overwrite_newer_content": "Save — overwrite newer content",
       "save_overwrite_newer_content_title": "Save — the content changed since you loaded it; saving now overwrites the newer content with your draft",
-      "save_to_live_cmd_s_updates_the_live_state_withou": "Save to Live (Cmd+S) — updates the live state without versioning",
+      "save_to_live_cmd_s_updates_the_live_state_withou": "Save to Live ({{shortcut}}) — updates the live state without versioning",
       "snapshot": "Snapshot",
       "snapshot_the_current_content_as_a_new_version_an": "Snapshot the current content as a new version and publish it",
       "tag": "tag…",
@@ -7805,11 +7811,11 @@
         "restored": "Connection restored",
         "interrupted": "Connection interrupted",
         "give_up": "Connection unstable — please try again.",
-        "throttle_retrying": "The model provider is throttling requests — retrying…",
+        "throttle_retrying": "Requests are being throttled — retrying…",
         "throttle_restored": "Throttling cleared",
-        "throttle_interrupted": "The model provider kept throttling requests",
-        "throttle_give_up": "The model provider is throttling requests — please try again.",
-        "throttle_resuming": "The model provider is throttling requests — finishing this answer…"
+        "throttle_interrupted": "Throttled — retry stopped",
+        "throttle_give_up": "Requests are being throttled — please try again.",
+        "throttle_resuming": "Requests are being throttled — finishing this answer…"
       },
       "gatewayNotice": {
         "turn_limit_minutes_one": "{{count}}-minute",
@@ -7912,6 +7918,7 @@
         "crew_name_undispatchable": "This thread's crew name cannot be dispatched. Rename or recreate the bot.",
         "code_channel_worktree_not_ready": "This code channel's worktree is not ready, so the message was not run. Send it again in a moment.",
         "remote_crew_read_only": "This chat ran on a remote crew and is read-only now. Open the crew's own session to keep going.",
+        "cron_run_read_only": "This cron run's transcript can be read here but not replied to. Start a new chat to follow up on it.",
         "archive_failed_turn_cancelled": "Archiving this tab failed after its running turn was cancelled. The tab was kept, but that turn did not finish — send your message again to continue.",
         "kas_signed_out": "Not signed in to Kiro. Sign in from Settings → Kiro account, then send your message again.",
         "windows_spawn_blocked": "Windows would not start the agent program ({{binary}}). AppLocker, an EDR product or group policy on this computer likely blocked it. Ask your IT administrator to allow that file, then start a new chat.",
@@ -8165,7 +8172,7 @@
       "return_to_split_view": "Return to split view",
       "scroll_to_bottom": "Scroll to bottom",
       "session_options": "Session options",
-      "split_view_d": "Split view (⌘D)",
+      "split_view_d": "Split view ({{shortcut}})",
       "start_a_new_chat": "Start a new chat",
       "session_closed_in_another_window": "This session was closed in another window",
       "close_window": "Close window",
@@ -9163,6 +9170,7 @@
         "folder_path": "Folder path",
         "folder_path_e_g_home_user_notes": "Folder path (e.g., /home/user/notes)",
         "folder_picker_failed": "Couldn't open the folder picker. Type the folder's path instead.",
+        "folder_already_a_source": "This folder is already in your sources as “{{name}}”.",
         "ignore_patterns": "Ignore patterns",
         "ignore_patterns_help": "One pattern per line, matched against each file's path inside this folder. * matches any characters, including /. Matching is case-sensitive.",
         "ignore_patterns_keep_indexed_files": "Files already indexed that match a new pattern are kept and no longer updated.",
@@ -9573,7 +9581,12 @@
       "schedule_last_run": "Last run {{when}}",
       "schedule_never_ran": "Has not run yet",
       "schedule_failed": "failed",
-      "schedule_run_failed_notice": "A schedule's last run failed. Open it to see what went wrong.",
+      "schedule_state_auto_paused_one": "Paused after {{count}} failure",
+      "schedule_state_auto_paused_other": "Paused after {{count}} failures",
+      "schedule_failed_notice": "“{{name}}” failed on its last run.",
+      "schedule_failed_notice_more_one": "“{{name}}” and {{count}} other schedule failed on their last run.",
+      "schedule_failed_notice_more_other": "“{{name}}” and {{count}} other schedules failed on their last run.",
+      "schedule_open_run_log": "Open run log",
       "schedule_next_run": "Next in {{time}}",
       "schedule_new": "New schedule",
       "schedule_load_failed": "Could not load this bot’s schedules.",
@@ -9668,6 +9681,9 @@
       "goals_heartbeat_hint": "Every {{interval}}, finds work on its own",
       "goals_heartbeat_every": "Every {{interval}}",
       "goals_heartbeat_interval": "How often",
+      "goals_heartbeat_hours": "Only between",
+      "goals_heartbeat_hours_from": "Active from",
+      "goals_heartbeat_hours_to": "Active until",
       "goals_heartbeat_credits": "Each run uses credits.",
       "goals_heartbeat_per_day_one": "up to {{count}} run a day",
       "goals_heartbeat_per_day_other": "up to {{count}} runs a day",
@@ -10322,6 +10338,7 @@
         "oauth_connect_button": "Connect with WakaTime",
         "oauth_connect_lead": "Since 1 November 2026, WakaTime API keys can only send activity, not read it. Connect your WakaTime account to keep reading your stats.",
         "oauth_connecting": "Opening WakaTime…",
+        "oauth_desktop_handoff": "Finish connecting WakaTime in your browser. It may ask you to sign in first. This panel updates when you come back.",
         "oauth_desktop_notice": "Open this dashboard in a web browser to connect WakaTime. Once connected there, the desktop app uses the same account.",
         "oauth_disconnect_button": "Disconnect",
         "oauth_disconnecting": "Disconnecting…",
@@ -11646,6 +11663,12 @@
         "this_gateway_s_python_can_t_install_extra_packag": "This gateway's Python can't install extra packages, so Transcribe can't be enabled here. Run the gateway from a Python environment where pip can install boto3 + amazon-transcribe.",
         "transcribe_voice_into_the_message_box_when_you_c": "Transcribe voice into the message box when you click the mic",
         "us_east_1": "us-east-1",
+        "pointer_heading": "Start dictation by holding the message box",
+        "pointer_heading_desc": "Press and hold the mouse or trackpad button on the message box to talk, and let go to finish. Moving the pointer cancels; a quick click still places the cursor.",
+        "pointer_enabled": "Hold the message box to talk",
+        "pointer_enabled_hint": "Turn this off and a press on the message box only places the cursor.",
+        "pointer_hold_time": "Hold time",
+        "pointer_hold_time_desc": "How long the button stays down before dictation starts. Shorter starts sooner; longer keeps a slow click from starting it.",
         "ptt_altgr_note": "On most Windows and Linux keyboards the right Alt key is AltGr, which helps type accented characters — so a lone Option cannot be the default here.",
         "ptt_enabled": "Use a key to start dictation",
         "ptt_enabled_hint": "Turn this off to stop a key from starting dictation — you can still dictate from the microphone button.",
@@ -11863,6 +11886,7 @@
         "checking_against_default_no_region": "Checked with your default AWS credentials, with no region set.",
         "checking_against_no_region": "Checked against profile {{profile}}, with no region set.",
         "cloud_crew_name": "{{productName}} Cloud ({{tag}})",
+        "hide_launch_card": "Hide card",
         "code_ready": "Your sign-in code is ready",
         "code_ready_for": "The sign-in code for {{name}} is ready",
         "confirm_cancel_remove": "Yes, remove “{{tag}}”",
@@ -12068,6 +12092,7 @@
         "your_code": "Your code: {{code}}",
         "reported_host": "{{host}} (reported)",
         "reported_host_hint": "This crew reports being on this machine. This dashboard has no route to it and never dials it — the connection rides the crew that reaches it.",
+        "restart_clears_draft": "Restarting clears your unsaved crew form.",
         "results_stale": "The profile or Region changed since this check. Re-check to update.",
         "crew_enabled": "Connections: On",
         "crew_disabled": "Connections: Off",
@@ -12096,7 +12121,9 @@
         "sign_in": "Sign in",
         "sign_in_crew": "Sign in on {{name}}",
         "setting_up_progress": "Setting up · {{current}} of {{total}}",
-        "launching_crew": "Launching {{name}}"
+        "launching_crew": "Launching {{name}}",
+        "ssm_start_session_denied": "This AWS role isn't allowed to start an SSM session on this instance. Give it ssm:StartSession, or choose an AWS profile that has it.",
+        "show_aws_error": "Show the AWS error"
       },
       "webhooksPanel": {
         "inbound_webhooks": "Inbound webhooks",

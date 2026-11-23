@@ -481,7 +481,9 @@ that delivered the loop's last turn. `_holds_for_person_wait` checks this in
 nothing, reaches no probe gate or quiet floor, and is neither extended nor
 stopped; it re-arms at the loop's interval and sets `waiting_on_person` (with
 `waiting_on_person_at`), which `monitor_inspect`, the REST row and the
-`autonudge_state` frame carry. A worker's report changes the fingerprint and
+`autonudge_state` frame carry. Every held tick sends that frame after its re-arm,
+so the dashboard never keeps a passed deadline and reads the held loop as due
+(which would disable Nudge now). A worker's report changes the fingerprint and
 releases it on the next tick, and so does a conductor `decide` or `close` (both clear the `ask` record); its other writes (`goal`, `verdict`, `ask`) do not; a manual fire clears `ledger_seen_fp` so it
 is never held; a loop already held for an unanswered approval is left to that
 hold. On release the held time is added to `created_ts`, as the approval hold
@@ -802,7 +804,9 @@ fail safe:
 A pull-request watch normally reaches its end turn-free: a merge classifies to
 `SUCCESS`/`pull_request_merged` and `decide_monitor` returns `STOP_SUCCESS`, a
 close to `BLOCKED`/`pull_request_closed` and `STOP_BLOCKED`, and the owner is
-told only by the terminal bell notice (`_notify_nudge_expired`). The session that
+told only by the terminal notice (`_notify_nudge_expired`): a passive feed note
+with no bell for a merge, a note at the `system.monitor` channel's priority for a
+close (see [app-notifications](app-notifications.md)). The session that
 armed the watch gets no turn, even though the merge is often the event an agent
 is waiting for.
 

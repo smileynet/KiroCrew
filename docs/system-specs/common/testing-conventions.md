@@ -981,6 +981,22 @@ for (const step of steps) {
 - **Prove both directions in the PR.** Make the bug in the product file and show the
   test red; add a legal new member without touching the test and show it green.
 
+Bad, a split-time list compared both ways with a class's live members, so a new
+member fails until it adds a line:
+
+```python
+assert sorted(present ^ set(_MEMBERS)) == []
+```
+
+Good, the snapshot may only lose entries, and the rules every member must keep are
+read off the class (`test/test_acp_bindings.py`):
+
+```python
+assert sorted(set(_MEMBERS) - present) == []       # no split member was lost
+assert _placement_gaps(AcpProvider, OWNERS) == []  # each lives in its owner, same name
+assert _rebound_names(_facade_class()) == []       # the class body binds each name once
+```
+
 What stays, and why:
 
 | Kind | Example | Why it stays |
@@ -988,7 +1004,7 @@ What stays, and why:
 | Ratchet | `test/wait_discipline_baseline.txt`, `_ALLOWED_DROPS`, per-site bypass baselines | It may only shrink; a new bad site is what it refuses ([Merge-safe ratchets and counts](#merge-safe-ratchets-and-counts)) |
 | Review list | the [whole-tree registration pins](#a-whole-tree-registration-pin-not-selected-by-diff-relevance) for link screens and port verdicts | A new dangerous site is meant to make a person look |
 | Contract | wire protocol values, a telemetry schema, persisted settings values, a platform fact | Adding or dropping one silently is a defect. Say which contract in a one-line comment |
-| Frozen snapshot | the names a facade served when its file was split | Nobody edits it again |
+| Frozen snapshot | the names a facade served when its file was split | Nobody edits it again. It checks the snapshot is still a subset of the live set, never equal to it, or every new member edits it |
 
 Enforced by the flake-pattern ratchet: K22 counts, in a Python test, an `assert` or
 `assertEqual` that pins a public ALL-CAPS name imported from `kiro_crew` (or read
@@ -3616,6 +3632,30 @@ while not observed():
 Where a test wants a timeout to *expire*, set it to `0` rather than a small value: the
 same branch is reached with no clock dependency at all.
 
+**A mocked "now" is a calendar date, so anchor it to the real clock.** A test that
+mocks `Date.now` to a fixed literal (`Date.parse('<some day>')`) stamps whatever it
+writes with that day. A store that prunes by age against the real clock, or keeps its
+stamps in module memory across tests, then treats those stamps as that many days old,
+and the test starts failing on the day the literal falls past the TTL, on every branch
+at once. `ChatPageDrafts.test.tsx` mocked its steer take-back clock to a fixed day; the
+chat drafts store stamped `slot-a` under it and kept the stamp in module memory, and a
+later test's `slot-a` draft came back `''` once that day was 30 days old. Fix: mock
+`now` relative to the real clock (`const NOW = Date.now()`, then `NOW + offset`), and
+reset each module-level store between tests (`__resetForTests` in `beforeEach`). A
+fixed literal is right only when the date itself is the input under test, such as
+formatting or a time-zone edge, and then nothing that ages by the real clock may read it.
+
+```ts
+// WRONG: expires on a fixed day once the literal is older than the TTL
+const NOW = Date.parse('2025-01-01T00:00:00Z')
+// RIGHT: the same distance from the real clock on every run
+const NOW = Date.now() // flake-ok: read once, then pinned with vi.spyOn(Date, 'now')
+```
+
+The flake-pattern ratchet counts a bare `Date.now()` in a test file as
+`J3-unpinned-date`, so the line that reads the real clock once carries a
+`flake-ok:` reason naming where the value is pinned.
+
 **A request budget the test spends in real seconds measures the runner.** A 3 s recall
 deadline with a 1 s `time.sleep` "burn" left the judge's wait at the mercy of every
 cold step before it (store, pool, embedding): on loaded Windows runners the remaining
@@ -3939,6 +3979,21 @@ publishes itself, then `rt._answer_tasks` draining for the answers those frames 
 For state published on the way to a broadcast, the frame arriving on the owner's queue IS
 the barrier — the demux snapshots before it broadcasts, so the frame proves the snapshot
 ran.
+
+**A scripted stream that ends at once races any task its events start.** The stream
+loop schedules a held peer steer's boundary flush as a TASK on a tool result
+(`deferred_steer.schedule_flush`), and that task hops to threads to warm the gate
+(`prewarm_enabled_check`) before it steers. A real model step after a tool result runs
+for seconds, so production always injects first. A script of
+`[tool_call, tool_result, complete]` ends the turn in the same few loop steps: on a
+loaded macOS runner the turn's hand-off queued the steer before the flush reached the
+client, and `test_a_tool_result_in_a_running_stream_injects_a_held_steer` failed with
+"Expected steer to have been awaited once. Awaited 0 times." on five pull requests in
+twelve hours, never on Linux or Windows. When an event starts a task and the assertion
+is about what that task does INSIDE the turn, the script's next event waits on that
+task's own signal (`await await_until(steered)` in an async generator, set by the
+mock's `side_effect`), the way a real model step outlasts it. A barrier after `_drive`
+cannot help: by then the turn is over.
 
 **A negative assertion is only as strong as the barrier in front of it.**
 `assert qa.empty() and qb.empty()` after a turn budget passes for the trivial reason if

@@ -581,6 +581,18 @@ is confirmed no longer enabled; absence from the on-disk map is not by itself
 proof (a clean rebuild starts from an empty map, and dropping on that basis made
 an enabled app's tools vanish).
 
+The writers that share `agents_spec_lock` — the agent-detail PATCH, fork and
+publish, the background fork refresh — are serialized from the other end, because
+the rebuild reads its merge base long before it takes that lock. Under the lock,
+just before the write, it reads the file again: identical bytes change nothing,
+and otherwise every top-level key the rebuild left as its base had it takes the
+file's current value (`_carry_concurrent_spec_edits`), so a save committed mid
+rebuild is kept instead of reverted. A key the rebuild derived itself stays as
+derived, the `includeMcpJson: false` pin included, a carried `allowedTools`
+runs through the final auto-approve pass again, and a carried `toolsSettings`
+loses the retired `deniedCommands`/`autoAllowReadonly` again, so carrying can
+never widen a grant.
+
 ### Servers a connected computer exposes (`connected-computer-<name>`)
 
 A chat bound to a connected computer (feature preview; providers.md § Connected computers
@@ -636,12 +648,12 @@ quarantine exclusion, and the discover-and-sync step (`sync_discovered_servers`,
 
 | Owner | Owns |
 |---|---|
-| `mcp_discovery_server_info.py` | `McpServerInfo`, the scope names and config-source tables, and `redact_mcp_headers` / `redact_mcp_error` |
+| `mcp_discovery_server_info.py` | `McpServerInfo`, the scope names and config-source tables, and `redact_mcp_headers` / `redact_mcp_error` (the configured header values are masked first, then the generic credential scanners) |
 | `mcp_discovery_probe_state.py` | the protocol revision every client handshake offers and steps down to, the probe timeouts and error cap, the once-only warning ledgers, and the probe-result cache |
 | `mcp_discovery_managed.py` | the managed servers' subcommand and tool-module tables, `managed_server_is_session_bound`, the in-process tool read, and stale-command repair |
 | `mcp_discovery_config.py` | loading the agent config and the `mcp.json` sources per scope, and `list_servers` |
 | `mcp_discovery_remote.py` | `_probe_remote`: the SSRF vet and pinned connection, the HTTP handshake, header expansion, and the authorization checks |
-| `mcp_discovery_probe.py` | `probe_server`: refusing a disabled server, and the stdio handshake of a local server spawned in the sandbox on a private loop, with its temp refusals |
+| `mcp_discovery_probe.py` | `probe_server`: refusing a disabled server, and the stdio handshake of a local server spawned in the sandbox on a private loop, with its temp refusals; on a centrally governed host it runs Kiro Crew's own managed server through a trusted absolute `env` that sets the scrub-listed cache-only policy markers as assignments (`_with_post_scrub_markers`), so a `sandbox.min_level` floor that raises the probe to the cc or strict tier, whose launcher scrubs them, still starts the child in the central policy tier |
 
 `list_servers()` reads `~/.kiro/agents/kirocrew.json`, then each scope file with
 provenance, re-resolves stale managed commands, and overlays cached probe
@@ -1472,6 +1484,26 @@ the encoding is accepted. Two installs sharing one data home (the desktop app an
 dev venv, say) therefore admit each other's approvals of a `python3`-pinned
 launch, since each reads the alias as its own interpreter; that widens nothing,
 because each gateway already runs as the user on that interpreter.
+The env half also folds the gateway's own part of a declared `PATH`: the part
+`env.spec_env_path` appends after the spec's own entries
+(`env.gateway_spec_path`). A `PATH` value that is exactly that composition hashes
+as its own entries plus a `gateway-path` alias (`hashing.hash_launch_env`), so a
+re-rendered service unit or a package installer that changes the gateway's own
+`PATH` pauses no share. The spec's own entries still count, any other `PATH`
+hashes as written, and the pool key keeps the real `PATH`. The broker pins the
+part when it starts (`launch_approval.pin_gateway_part`), so a live `PATH`
+change in the gateway reaches a declared spec `PATH` at the next start, and the
+manager hands gatewayd the same part (`KIROCREW_MCP_GATEWAY_PATH`), because the
+daemon's own `PATH` is rewritten at spawn. Only that current part folds: a value
+saved already expanded (App Kit register writes `emit_env` output into
+`mcp.json`) asks for approval once after the part moves, because an earlier part
+read as entries after the spec's own would be a search path nobody approved. An
+approval stored before the fold holds the literal digest, which matches no folded
+identity, so that launch is refused once as `changed_needs_reapproval` and
+approved again. A daemon's pong reports the part it was handed, and a gateway
+pinned to another part treats it as drift and replaces it rather than adopting
+it. Security detail:
+[security.md](../system-specs/modules/security.md#mcp-launch-authorization-leaves).
 An absent or empty store approves nothing. A stub
 without a matching fingerprint stays on the session's unpooled, sandboxed launch
 path. A queued cold spawn reloads the store after admission and resolves the same
@@ -1605,17 +1637,28 @@ only a **Remove** button that takes the mark off. A row's **Details** shows
 the launch in the gateway's display-safe form (argv, env key names), each
 distinct command line once, with the approved launch beside the new one for a
 changed command. The changed arguments are marked in each column and repeated
-in no line above them; each column lists only the env keys that were added,
-removed or changed, and those keys are said once above the columns. A launch
-whose command is new on its side also lists and marks its own keys
-(`unmatchedKeys`), unless a launch the other side alone runs had the same
-value, so a key it gained is shown even when another launch already set it.
-When a launch of a command both sides run changed as well
-(`wholeLaunchChanges`), per-key sets cannot prove which keys moved between
-those launches (two of them swapping a loader preload), so the columns hide no
-key and the changed launches are drawn whole behind **Show full command**. A key the
-same on both sides, such as a PATH that did not change, is not listed. An env
-key set on both sides with a new value is said there too: for a value the gateway shows in clear (PATH, `LD_*`, a `${VAR}`
+in no line above them. The gateway orders each side by its own hash, so
+launches are never paired by list position. A column draws one merged key list
+only where that cannot hide a change (`mergedEnvRule`): with one launch per
+side it lists that launch's added, removed and changed keys (a plain version
+bump lists none), unless a value is redacted or cut, since equal displays
+could then hide a change; when both sides run the same number of launches and every
+launch sets the same env, compared as sets, it lists none. A value the gateway
+hid, redacted or cut stands for many values, so a launch carrying one never
+counts as the same env. A change in launch
+count never counts as the same env; a replaced command with the same count and
+env does, as in the one-launch case, because no env key changed. In every other case each column draws every launch
+with its own env keys under its command, so a key that moved from one launch
+to another shows under a different command. Added and removed key names are
+marked, and said once above the columns. In the per-launch view a launch also
+marks a key (`markedKeysPerLaunch`): a pair on a launch the other side does
+not run whole, when the pair is not set on every launch of both sides. That
+marks a key a launch gained and a key that may have moved to another launch,
+and leaves a PATH that every launch sets unmarked. It is counted, never
+paired, so list order cannot change it. When a launch of a command both sides run changed as well
+(`wholeLaunchChanges`), the changed launches are also drawn whole behind
+**Show full command**. An env key set on both sides with a new value is said
+there too: for a value the gateway shows in clear (PATH, `LD_*`, a `${VAR}`
 reference) the list entries added and removed, and otherwise only its key
 (`envValueChanges`). When both sides run the same commands, the summary is per
 launch (`mcpLaunchDiff.launchChanges`): each new launch is paired with the
@@ -1716,6 +1759,22 @@ writes it and applies it in-process: the broker is stopped and, while any server
 is still stubbed, restarted so every stub is re-emitted with or without
 `--poolable`, and sessions are relinked. A write that bypasses that endpoint takes
 effect at the next gateway start.
+
+A per-server share (`POST /api/mcp-gateway/servers/stub`) applies the same way,
+with the configured set: the broker is stopped and started with it
+(`mcp_broker._apply_mcp_stub`), because a routed server's target lives in the
+daemon's environment from spawn (`daemon.launch.env_target_resolver`) and the
+overlays are written with it. The gateway keeps running. Chats attached to the old
+daemon get their in-flight routed calls failed with a retryable error after
+`DRAIN_SECS`. Stubs for retained targets reconnect (`stub.py`) unless they have
+requested resource subscriptions, which the new daemon cannot recover. Every
+broker restart resets open chats through `reset_sessions`, including additions
+and approved launches; removing a served target also resets them. Busy chats
+reset when their turn ends (`defer_busy=True`, `keep_busy=True`), and the response
+reports `sessions_reset`. This applies even when an `mcp.server` card leaves
+**Restart open chats to use it** unchecked. Starting the first broker only
+refreshes defaults; the card's checked option resets open chats so they pick up
+the new toolset.
 
 `response_spill_threshold_bytes` is read in the BROKER process
 (`gatewayd`), which runs no config watcher — `config.live.snapshot()` is always
@@ -2304,11 +2363,12 @@ swap landing in between is not caught, the same race the top-level overlay
 folder has.
 
 A worker session finds its stubs by its own execution record, never by the shared
-name, and only on KAS: `_pooled_session_servers_and_ref_spec` passes the session
-key on a positive `backend == kas` check, and `session_servers` answers
-`kirocrew-mate-worker` with that key only through
-`mate_overlays.worker_overlay_spec(overlay_dir, session_key)`. Every other host
-passes no key and gets no stub for `kirocrew-mate-worker`: the stock worker spec is
+name: KAS (`_pooled_session_servers_and_ref_spec`, on a positive `backend == kas`
+check) and the mirrored hosts (`AcpRuntime._mirrored_session_mcp`,
+`AcpClient._resolve_session_mcp_servers`) pass the session key, and
+`session_servers` answers `kirocrew-mate-worker` with that key only through
+`mate_overlays.worker_overlay_spec(overlay_dir, session_key)`. A lookup with no
+key gets no stub for `kirocrew-mate-worker`: the stock worker spec is
 rewritten like the conductor's (`with_conductor_source`), so
 `<overlay_dir>/kirocrew-mate-worker.json` exists, and a lookup by that name would
 hand its base stubs to a session without that session's merged limits. The record
@@ -2339,8 +2399,15 @@ mutes or marks registry-governed is withdrawn (`SessionExtras.withdrawn_stub_nam
 and both session start paths remove it from the session-level array before the
 hoist: a mute or a `type: registry` saved while a worker starts still takes effect. The
 same captured names reach the KAS projection for the background helper
-`kirocrew-lite`, which withdraws every stub its spec does not mount. claude's mirrored worker path is
-unchanged.
+`kirocrew-lite`, which withdraws every stub its spec does not mount. A
+mirrored host (codex, claude) withholds from its projection the names of exactly the
+stubs that lookup returned, and its mirror holds them to the projection's own read
+of the worker spec, as it does any agent's stubs: the `tools` allowlist with its
+mutes, codex's withhold rules and session-bound stub shape, claude's deny rules.
+That read also re-checks them as KAS does (`withdrawn_worker_stubs`): a stub whose
+server it drops, mutes or marks registry-governed leaves the array, and its name
+stays withheld, so neither half mounts it. So a Codex worker reaches
+`kirocrew-work` through a stub bound to its own session token.
 
 An app callback from a Bot's stub is governed as that worker's tool calls
 are. The spool record carries the stub identity `crewmate:<id>`, which no profile
@@ -3040,7 +3107,9 @@ server's args, env, url and headers) and refuses the proposal with `400
 invalid_text` naming the offending path, because the card shows the parameters
 and Apply sends them as written; the plan is never rewritten at publication. An
 ordinary server URL is not exfiltration-shaped and passes. Because of that, an
-`mcp.add_custom` card shows everything Apply sends: the full launch line
+`mcp.add_custom` card (no longer raised by an agent: `propose_change` refuses it
+with `use_request_server`, and `request_server` raises `mcp.server` instead) shows
+everything Apply sends: the full launch line
 (`shlex.join` of command and args, or the url; the row wraps), every env and
 header value (`KEY=value`, `Name: value`), and any other spec field, each passed
 through the credential redactor as a second line of defence. `list_change_kinds`, `find_setting`, `get_member_capabilities`, `diagnose_settings`, `propose_change` and `get_change_status` are exact
@@ -3844,7 +3913,7 @@ a count of package modules each.
 
 `mcp_cron.py` keeps the cron server itself — argument validation, the call path, the
 caller's identity and ownership checks, the tool bodies (`_call_tool_inner`) and the
-stdio entry point — and is a mirror facade over four sibling owners, so every name
+stdio entry point — and is a mirror facade over five sibling owners, so every name
 still reads and patches as `mcp_cron.<name>`. New cron-server code goes to the owner of
 its responsibility:
 
@@ -3854,6 +3923,7 @@ its responsibility:
 | `mcp_cron_vet` | the cron gate: the governance, command and script vets, the fire-time re-vet `vet_job_at_fire_time`, the storage-time denial audit, and the folder `cron_add` names |
 | `mcp_cron_tool_list` | the tool catalogue `tools/list` returns |
 | `mcp_cron_list_render` | `cron_list`'s full, compact and JSON renderings and the run-history fold |
+| `mcp_cron_chat_folder` | the sidebar chat folder `cron_add` / `cron_update` file a job's chat in: the Schedule form's checks, folder-store hold and tab move, run on the `POST /api/crons/tools` route's loop the route marks per call |
 
 The remaining upward dependency is known: the plumbing could move to a module the
 handlers own, which would make `mcp_tools` a leaf. That is a separate change —
@@ -5209,16 +5279,30 @@ the agent's spec mounts on `toolSearch.neverDefer` for a spec that grants
 | `kirocrew-worker`, `kirocrew-mate-worker` | `work_brief`, `work_report`, `mcp_server_wait` | 1,200 |
 | `kirocrew-pipeline-conductor`, `kirocrew-security-conductor` | `work_dispatch`, `session_create`, `session_send`, `session_read_message`, `session_close`, `work_ledger_read`, `work_ledger_record`, `accept_eval`, `monitor_start`, `wait`, `mcp_server_wait` | 7,700 |
 | `kirocrew-conductor`, `kirocrew-ledger-conductor`, `kirocrew-team-lead` | the eleven above and `work_brief` | 7,850 |
-| a custom agent (`CUSTOM_AGENT_JOB_TOOLS`) | `mcp_server_wait` | none: one tool of 63 tokens |
+| a custom agent (`CUSTOM_AGENT_JOB_TOOLS`) | `spawn_run`, `spawn_sub_agents`, `spawn_status`, `mcp_server_wait` | 3,350 (`CUSTOM_AGENT_JOB_TOOL_BUDGET`) |
 
-A custom agent grants no loader, so every MCP tool it can call is on
-`neverDefer`, except the tools of the Kiro Crew servers Crew itself added to it
-(`acp/default_crew_servers.crew_added_servers`: the managed entry, byte for byte).
-Those are left behind KAS's loader, as on the default agent, so Crew's own tool
-specs (about 137 K characters, measured on an agent with no server of its own) no
-longer ride in each of its requests; its
-`CUSTOM_AGENT_JOB_TOOLS` and any added-server tool its author named one by one stay
-direct (`custom_agent_never_defer_ids`).
+The tools of the Kiro Crew servers Crew itself added to a custom agent
+(`acp/default_crew_servers.crew_added_servers`: the managed entry, byte for byte)
+are left behind KAS's loader, as on the default agent, so Crew's own tool specs
+(about 137 K characters, measured on an agent with no server of its own) no longer
+ride in each of its requests. Its `CUSTOM_AGENT_JOB_TOOLS` the spec mounts stay
+direct whether or not the spec grants the loader: a spec that grants none keeps
+every other MCP tool it can call direct too, and any added-server tool its author
+named one by one (`custom_agent_never_defer_ids`); a spec that grants it, which
+`"*"` and `@builtin` do, is sent those job tools alone
+(`job_tool_ids(..., custom=True)`). The sub-agent tools are on that row because a
+custom agent's prompt cannot send it to a tool it does not know it has: behind the
+loader they were missing from the tool list the model reads, and a custom agent
+asked to start a sub-agent reached for something else. A spec that excludes one of
+them still cannot call it (`excludedTools` is applied by KAS before it partitions),
+and a spec whose `tools` does not reach `kirocrew-core` gains none: one that names
+Crew's tools one by one (`@kirocrew-core/memory_recall`) keeps exactly those, while
+one that lists only built-ins (`fs_read`, `execute_bash`) is given `@kirocrew-core`
+whole by Crew and so gains the row. Either way the list decides only what is listed
+up front; what the session may call is unchanged. The process
+sharing preview carries one limit: a loader-granting custom agent whose chat joins
+a process another agent founded runs on that founder's list
+(`acp/chat_runtime_sharing.agent_pins_tool_surface`).
 
 `mcp_server_wait` is in every row because every shipped agent's turn can be told a
 server is still starting (the `[MCP SERVERS]` block), and a load in front of the
@@ -5275,9 +5359,11 @@ at most five seconds, as the start did before
 The rules the table is held to (`test/test_job_tools.py`):
 
 - **A row is the tools the agent's own prompt makes its procedure**, not the tools
-  it might use. Anything else is one `tool_search` away. The one addition is the
+  it might use. Anything else is one `tool_search` away. The additions are the
   default agent's most used small tools above, chosen from measured use, never
-  from guesses.
+  from guesses, and the custom-agent row, whose prompt is unknown: it holds the
+  sub-agent tools, because an agent cannot be told a procedure for a tool it
+  does not see.
 - **A row fits its budget.** Its tools ride in every request of that agent. The
   budgets live in `test/test_job_tools.py` (`JOB_TOOL_BUDGETS`), beside the test
   that enforces them, because nothing at run time reads one. They are counted the
@@ -5291,8 +5377,10 @@ The rules the table is held to (`test/test_job_tools.py`):
 - **The set is fixed per agent**, never per session, so the tool definitions an
   agent's requests open with are the same in every session of it and the cached
   prefix stays valid.
-- **An agent with no row is untouched**: an operator's own agent, an app's agent
-  and a crew member's template put on the wire what they did before. The table is
+- **An agent with no row is untouched**, except a custom agent Crew added its own
+  servers to, which takes the custom-agent row above: an app's agent, a crew
+  member's template and a shipped agent with no row put on the wire what they did
+  before. The table is
   keyed by agent name, so this is about the name: a spec an operator saved under a
   shipped name (their own `kirocrew-worker.json`, say) takes that name's row, for
   the row's tools the spec itself mounts and for nothing else it mounts.
@@ -6249,7 +6337,9 @@ no walk to get wrong. The model still reads the marker, so a reply that repeats 
 result carries the marker line too; the dashboard's segment flush drops each line
 that is only such a marker from the saved reply
 (`session_directive.strip_quoted_markers`) and keeps the reply's other lines, and
-the channel `TurnDriver` drops the same lines from the streamed reply.
+the channel `TurnDriver` drops the same lines from the streamed reply, as do the native
+Slack thread turn, the plain monitor-loop wake, a team-channel agent's post and
+`kirocrew chat`.
 
 A second, provider-neutral channel covers a backend that emits no
 `_meta.kiro` identity. After encoding, the tool reports the CALL (tool name and

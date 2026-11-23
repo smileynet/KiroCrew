@@ -1981,6 +1981,20 @@ export const SETTINGS_REGISTRY: SettingEntry[] =
     }
   },
   {
+    "id": "chat.since-you-left-briefs",
+    "label": "Since you left briefs",
+    "labelKey": "pages.settings.chatPanel.warm_task_brief",
+    "description": "When you return to a conductor mode chat or a bot thread after 30 minutes away, post a catch-up brief.",
+    "hint": "Off: a return posts no brief. Takes effect on your next return.",
+    "tab": "chat",
+    "type": "toggle",
+    "occurrence": 1,
+    "params": {
+      "sub": "sessions"
+    },
+    "configKey": "dashboard.warm_task_brief"
+  },
+  {
     "id": "chat.soft-stop-budget-seconds",
     "label": "Soft-stop budget (seconds)",
     "labelKey": "pages.settings.chatPanel.soft_stop_budget_seconds",
@@ -2674,6 +2688,19 @@ export const SETTINGS_REGISTRY: SettingEntry[] =
     }
   },
   {
+    "id": "developer.use-your-company-s-sign-in",
+    "label": "Use your company's sign-in",
+    "labelKey": "pages.developer.featurePreviewsTab.crew_client",
+    "description": "Uses your company's own sign-in for its portal. Nothing changes until you sign in with that portal.",
+    "hint": "Some companies install Kiro Crew with their own company sign-in. Turn this on to use it. While you're signed in with it, you can't chat with the agent on this computer, and the sign-in form says so first. Otherwise nothing changes.",
+    "tab": "developer",
+    "type": "toggle",
+    "occurrence": 1,
+    "params": {
+      "sub": "feature-previews"
+    }
+  },
+  {
     "id": "developer.visual-refresh",
     "label": "Visual refresh",
     "labelKey": "pages.developer.featurePreviewsTab.visual_refresh",
@@ -3191,6 +3218,18 @@ export const SETTINGS_REGISTRY: SettingEntry[] =
     }
   },
   {
+    "id": "display.touch-screen-layout",
+    "label": "Touch screen layout",
+    "labelKey": "pages.settings.displayPanel.touch_layout",
+    "hint": "Use this if your browser has no Request desktop site option. Automatic follows the browser's mobile or desktop site mode. The desktop layout applies from 768px up; below that the phone layout stays. Saved on this browser only.",
+    "tab": "display",
+    "type": "select",
+    "occurrence": 1,
+    "params": {
+      "sub": "view"
+    }
+  },
+  {
     "id": "display.translucent-panels",
     "label": "Translucent panels",
     "labelKey": "pages.settings.displayPanel.translucent_panels",
@@ -3539,7 +3578,7 @@ export const SETTINGS_REGISTRY: SettingEntry[] =
     "description": "Authenticates coding-activity sync when WakaTime is enabled."
   },
   {
-    "id": "security.ask-me-before-running-tools-an-mcp-server-pre-approves",
+    "id": "security.ask-me-before-running-tools-set-to-auto-approve-in-a-tool-server-s-settings",
     "labelKey": "pages.settings.securityPanel.safetySwitches.ask_label",
     "tab": "security",
     "type": "toggle",
@@ -3548,8 +3587,8 @@ export const SETTINGS_REGISTRY: SettingEntry[] =
       "section": "safety"
     },
     "configKey": "mcp.honour_auto_approve",
-    "label": "Ask me before running tools an MCP server pre-approves",
-    "description": "Tools you set to Always allow still run without asking."
+    "label": "Ask me before running tools set to auto-approve in a tool server's settings",
+    "description": "Tools you set to Always allow, on an approval card or in MCP Servers, still run without asking."
   },
   {
     "id": "security.denied-commands",
@@ -3632,7 +3671,7 @@ export const SETTINGS_REGISTRY: SettingEntry[] =
     },
     "configKey": "mcp.protect_kiro_permission_rules",
     "label": "Stop the agent from editing its own permission rules",
-    "description": "On: the agent's file-editing tools can't change the rules that let tools run without asking you. Off: they can. Commands the agent runs in a terminal can change these rules either way."
+    "description": "On: the agent's file-editing tools can't change the rules that let tools run without asking you. Off: they can."
   },
   {
     "id": "security.trust-every-third-party-app",
@@ -3903,6 +3942,24 @@ export const SETTINGS_REGISTRY: SettingEntry[] =
     "type": "input",
     "occurrence": 1,
     "configKey": "stt.custom_model_sha256"
+  },
+  {
+    "id": "voice.hold-the-message-box-to-talk",
+    "label": "Hold the message box to talk",
+    "labelKey": "pages.settings.sttSettings.pointer_enabled",
+    "hint": "Turn this off and a press on the message box only places the cursor.",
+    "tab": "voice",
+    "type": "toggle",
+    "occurrence": 1
+  },
+  {
+    "id": "voice.hold-time",
+    "label": "Hold time",
+    "labelKey": "pages.settings.sttSettings.pointer_hold_time",
+    "hint": "How long the button stays down before dictation starts. Shorter starts sooner; longer keeps a slow click from starting it.",
+    "tab": "voice",
+    "type": "stepper",
+    "occurrence": 1
   },
   {
     "id": "voice.how-the-key-works",

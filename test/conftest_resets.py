@@ -248,6 +248,27 @@ def _reset_browser_media_watches():
 
 
 @per_test_guard
+def _reset_kas_machine_fence_config():
+    """Start each test with no reused config read behind the machine token fence.
+
+    ``agent_sdk.kas_machine.fenced_token_path`` keeps a ``config.json`` read for two
+    seconds where no watcher runs, and the agent file gate asks it on every path, so
+    one test's machine mode would fence (or miss) the next test's token file.
+    """
+
+    def clear():
+        module = sys.modules.get("kiro_crew.agent_sdk.kas_machine")
+        if module is not None:
+            module._fence_config = None
+
+    clear()
+    try:
+        yield
+    finally:
+        clear()
+
+
+@per_test_guard
 def _forget_pending_trace_links():
     """Start each test with no pending worker-creation or patrol report links.
 
@@ -506,6 +527,21 @@ def _forget_enterprise_profile_pin():
     forget()
 
 
+@per_test_guard
+def _forget_pinned_gateway_spec_path():
+    """Forget the gateway ``PATH`` part a broker start or gatewayd pins for its life."""
+    import sys
+
+    def forget() -> None:
+        module = sys.modules.get("kiro_crew.env")
+        if module is not None:
+            module._PINNED_GATEWAY_SPEC_PATH = None
+
+    forget()
+    yield
+    forget()
+
+
 def forget_home_bound_caches() -> None:
     """Empty the process caches the boot smoke test checks before it boots.
 
@@ -703,18 +739,20 @@ def _restore_autonudge_singleton():
 def _fresh_aws_bin_dir_trust(_floor_monkeypatch):
     """Start each test with the deploy engine's empty fallback-directory trust state.
 
-    ``deploy.engine`` keeps two process globals for the AWS tooling dirs: the
+    ``deploy.engine`` keeps three process globals for the AWS tooling dirs: the
     ``_TRUSTED_AWS_BIN_DIRS`` snapshot that every resolver walk, ``run_aws`` and
-    ssh spawn republishes, and ``_WARNED_AWS_BIN_DIR_REFUSALS``, the refusals
-    already logged. A test that builds a child env from an absolute head reads
-    the snapshot, so one an earlier test on the same worker left would decide
-    what that child's PATH holds. Patched only when the module is already
-    imported: importing it here would load the deploy engine into every test.
+    ssh spawn republishes, and ``_WARNED_AWS_BIN_DIR_REFUSALS`` and
+    ``_WARNED_AWS_TOOL_REFUSALS``, the refusals already logged. A test that
+    builds a child env from an absolute head reads the snapshot, so one an
+    earlier test on the same worker left would decide what that child's PATH
+    holds. Patched only when the module is already imported: importing it here
+    would load the deploy engine into every test.
     """
     engine = sys.modules.get("kiro_crew.deploy.engine")
     if engine is not None:
         _floor_monkeypatch.setattr(engine, "_TRUSTED_AWS_BIN_DIRS", ())
         _floor_monkeypatch.setattr(engine, "_WARNED_AWS_BIN_DIR_REFUSALS", set())
+        _floor_monkeypatch.setattr(engine, "_WARNED_AWS_TOOL_REFUSALS", set())
 
 
 @per_test_guard
@@ -984,6 +1022,23 @@ def _isolate_context_store_caches(_floor_monkeypatch):
 
 
 @per_test_guard
+def _isolate_kas_approve_for_me():
+    """Drop the approve-for-me owner check and engine answer a test left behind.
+
+    A gateway boot registers an owner check bound to its own ``DashboardState``
+    and may cache the engine's answer; both are process state. Only a module
+    already imported can hold them, so a run that never imports it pays nothing.
+    """
+    module = sys.modules.get("kiro_crew.acp.kas_approve_for_me")
+    if module is not None:
+        module.reset_owner_check()
+    yield
+    module = sys.modules.get("kiro_crew.acp.kas_approve_for_me")
+    if module is not None:
+        module.reset_owner_check()
+
+
+@per_test_guard
 def _isolate_member_identity_cache(_floor_monkeypatch):
     """Give each test an empty cache of passed member-database identity checks.
 
@@ -1142,6 +1197,49 @@ def _reset_live_execution_records():
 
 
 @per_test_guard
+def _reset_subagent_memory_price_holders():
+    """Sizing must not inherit the settled rows of another test's managers.
+
+    Clear both the standalone owner and the facade without importing either:
+    the owner can be loaded before the facade composes its globals.
+    """
+
+    def clear():
+        for name in ("kiro_crew.subagent_parts.host_memory", "kiro_crew.subagent"):
+            module = sys.modules.get(name)
+            if module is not None:
+                module._MEMORY_PRICE_HOLDERS.clear()
+
+    clear()
+    try:
+        yield
+    finally:
+        clear()
+
+
+@per_test_guard
+def _reset_builtin_discovery_scan():
+    """Start each test with no kept scan of the package's builtin apps.
+
+    ``apps.discovery._package_scan`` keeps the last whole scan of the package's
+    ``builtins/`` for the process, keyed on that directory's inode and mtime only. A
+    test that patches the manifest reader or the path screen would otherwise read the
+    scan an earlier test on the worker left.
+    """
+
+    def clear():
+        module = sys.modules.get("kiro_crew.apps.discovery")
+        if module is not None:
+            module._package_scan = None
+
+    clear()
+    try:
+        yield
+    finally:
+        clear()
+
+
+@per_test_guard
 def _reset_subagent_not_due_memo():
     """Start each test with no remembered not-yet-due runs from the tombstone sweep.
 
@@ -1154,6 +1252,30 @@ def _reset_subagent_not_due_memo():
         module = sys.modules.get("kiro_crew.subagent_persistence")
         if module is not None:
             module._NOT_DUE_MEMO.clear()
+
+    clear()
+    try:
+        yield
+    finally:
+        clear()
+
+
+@per_test_guard
+def _reset_persisted_truncation_reports():
+    """Start each test with no truncated spawn listing already reported.
+
+    ``api_spawn_list`` remembers the truncation it last logged per audit identity,
+    and the owner's identity is ``<owner>`` in every test, so a report one test
+    left would turn the next test's WARNING into a DEBUG. A module without the
+    name is left alone, so ``prove.py``'s reverted tree still reaches the tests'
+    own assertions.
+    """
+
+    def clear():
+        module = sys.modules.get("kiro_crew.dashboard.handlers.messaging")
+        reported = getattr(module, "_PERSISTED_TRUNCATION_REPORTED", None)
+        if reported is not None:
+            reported.clear()
 
     clear()
     try:

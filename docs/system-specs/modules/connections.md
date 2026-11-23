@@ -177,6 +177,28 @@ before they become adoptable. A rejected warm claim is released, so a later
 Connect follows the cold path and reaches this single retry owner rather than
 carrying a second policy in the warm engine or dashboard handler.
 
+A cold mint whose kiro-cli cannot start names the cause for the card. A failure
+with no reason of its own records the coarse `mint_<exception type>` (for example
+`mint_acperror`), which the card shows as its generic setup failure. A spawn
+refused with the `kiro_cli_missing` tag records `mint_kiro_cli_missing`. Any
+other such failure of the readiness wait (an `ensure_ready` error, for example,
+or the `_MINT_READY_TIMEOUT_SECONDS` deadline) then asks kiro-cli whether it is
+signed out, through `kiro_prerequisite.kiro_signed_out_confirmed()` (its
+`whoami`, see [acp-client](acp-client.md)). That runs after the dedicated process is released
+and outside the mint table's lock, and a True answer records
+`mint_kiro_cli_signed_out`, so the deadline can end there rather than at
+`mint_timeouterror`. A disproved stored grant keeps `mint_grant_unproven` (see
+below), and the outcomes of the wait for the server's report,
+`mint_server_failed` and `mint_process_gone`, come after kiro-cli started:
+none of them is asked about. The
+card shows the same `mint_failure_kiro_cli_missing` sentence for the missing and
+the signed-out reason: Connect needs kiro-cli installed and signed in. The
+verdict comes from kiro-cli, never from the error's text: a remote server's own
+401 can sit in the same stderr tail. A failure anywhere else in the mint (the
+spec write, the URL gate) keeps its coarse reason.
+Decision:
+[2026-11-16](../../decisions/2026-11-16-a-signed-out-kiro-cli-gets-the-connect-cards-sign-in-message.md).
+
 A refused sign-in ends the attempt. kiro-cli answers the loopback callback before
 it exchanges the code, so a code the provider rejects never lands a grant: kiro-cli
 reports it only as a `server_init_failure` frame for that server and closes the
@@ -297,7 +319,19 @@ directly: `reason=validated_grant` when an on-disk grant was re-verified and
 proven usable without spawning a fresh consent flow, and `url_minted=<bool>` on
 a completed spawn — `True` when the dedicated kiro-cli spawn produced an
 approval URL, `False` when it found no challenge (an open endpoint, or a grant
-that landed concurrently). The route a Connect took is derivable from those
+that landed concurrently).
+
+**The cold mint waits for the server's own report.** Readiness drains MCP start-up
+frames for about a second, and a remote server that runs OAuth discovery and
+client registration first (Atlassian) asks for sign-in after that. So the kiro-cli
+route drains the session until the spec's server reports, inside the same
+`_MINT_READY_TIMEOUT_SECONDS` deadline, and only a server that reports ready
+counts as an open endpoint. A server that reports a failure, or asks for sign-in
+with no usable URL, ends `failed` with `reason=mint_server_failed`; a kiro-cli
+process that exits first ends `mint_process_gone`; a server that never reports
+ends `mint_timeouterror`. When a check has disproved the stored grant, each of
+those three ends `mint_grant_unproven` instead, so the card keeps its
+unproven-grant fence (see below). The route a Connect took is derivable from those
 fields; no separate label is emitted. A latency-tier vocabulary belongs to the
 warm-runtime seam (a URL already held; an activation on a shared warm process)
 and ships with that seam, where its routes exist as code and its consumers
@@ -1510,7 +1544,10 @@ plain-http `localhost` redirect from a PKCE app alone. Slack answers errors as a
 200 with `{"ok": false, "error": ...}`; `invalid_refresh_token` asks the user to
 reconnect. Its refresh tokens rotate and are single-use, which the
 commit-before-use refresh already handles. Disconnect revokes the access token
-with `auth.revoke` and reads `revoked` from the body; Slack has no endpoint that
+with `auth.revoke` and reads `revoked` from the body. Slack revokes only a live
+access token (its access tokens last 12 hours), so a held one that is expiring is
+renewed once first and the fresh pair is revoked; a failed renewal still revokes
+the held token. Slack has no endpoint that
 revokes a refresh token, so that token lives on upstream until Slack's 30-day
 expiry, and the card's revoke page ends the whole grant. Crew's own sign-in takes
 Slack's client from Settings → Connections only, and reads it from the vault.
@@ -1556,7 +1593,12 @@ own sign-in path. A url that differs only by a trailing slash or letter case
 Connect, which writes the registry url onto the entry before minting.
 Both wordings drop away once a grant is held, but the mint refuses either way, so
 the status row also carries `crewMintRefused` (`"sign_in_off"` or `"not_owned"`)
-whether or not a grant is held. While it is set the card offers no Connect or
+whether or not a grant is held. `"not_owned"` also rides the row of the owner's
+own recorded entry at the registry url exactly, which the card yields to
+(`status._owner_yielded_slugs`, through `crew_oauth._left_to_owner`): Connect
+would leave it the owner's, so the mint refuses it too. That row keeps its
+setup steps, because saving an OAuth app takes the slug back for the card.
+While it is set the card offers no Connect or
 Reconnect, and shows the matching setup line in their place; a held grant keeps
 Connected and Disconnect. The MCP Servers row offers no Sign in for a `slack`
 row that sends headers of its own, because the mint refuses that entry too; it
@@ -1716,7 +1758,10 @@ a client exists the card is an instruction, not an offer: `/api/connections/stat
 marks the row `needsClientConfig` (only while no grant is held), and the card
 renders the sixth state `needs-configuration` — a lock badge, the Documentation
 link, and a **Set up <provider>** button that opens the card's OAuth app in place
-of Connect. What the setup involves (a guided settings page, nothing changes
+of Connect. A Connect that still reaches the mint route (a stale tab, the agent's
+connect card) gets 409 `client_not_configured`, whose text names each half still
+missing (`Client ID`, `Client secret`).
+What the setup involves (a guided settings page, nothing changes
 until saved, removable later, registers an app and enters its client ID and
 secret) is the row's pre-action caveat, so it sits behind the amber triangle
 beside that route, never as a band — see [What a card shows

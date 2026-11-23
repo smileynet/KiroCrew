@@ -721,6 +721,7 @@ import map `ui.pages` uses, so React stays a single instance.
 | `session.folderId` | string? | Folder the chat is filed in, `''` at top level. A dashboard grouping with its own id -- **not** a directory, so key per-folder state on this and not on `cwd` |
 | `session.folderName` | string? | Folder's display name, to name it back to the user |
 | `session.cwd` | string | Working directory recorded for the session, when known |
+| `session.member` | `{ name }`? | In a Bot's own thread, the Bot's display name, so a control can say who the user is talking to. Undefined in every other chat |
 | `onClose` | function | Dismiss the control, e.g. after committing a change |
 
 The control is remounted when the session changes, so per-chat state cannot leak
@@ -2182,7 +2183,7 @@ the endpoint; it does not import provider code.
 | `setup.onDisable` | string | `""` | Shell command run when app is disabled |
 | `setup.onEnableTimeout` | number | `30` | Timeout in seconds for `onEnable` script, 1 to 300. A numeric string such as `"60"` is read as its number and a fraction is truncated. A value below 1 (including `false`) runs at the 30s default; `true` is read as 1 second and one above 300 runs at 300, with a warning logged each time the script runs; the manifest still installs and its signature is unaffected. A value that is not a number (`"abc"`, `null`) fails validation |
 | `setup.onDisableTimeout` | number | `30` | Timeout in seconds for `onDisable` script, 1 to 300, clamped the same way as `onEnableTimeout` |
-| `setup.configSchema` | object | `{}` | JSON Schema for app configuration |
+| `setup.configSchema` | object | `{}` | JSON Schema for app configuration. Nothing reads it. An owner can read and set the values in an app's config with `kirocrew app config <app> [get \| set <key> <value>]`, which runs none of the app's own checks. |
 
 If `onEnable` fails (non-zero exit), the enable is rolled back — the app
 stays disabled and any registered resources are deregistered. If it fails when

@@ -73,6 +73,7 @@ from kiro_crew import (
     session_work_dir,
     shutdown_event,
     update_ownership,
+    work_holders,
     work_root,
 )
 from kiro_crew._facade_compose import compose as _facade_compose
@@ -313,6 +314,7 @@ from kiro_crew.mcp_gateway.launch_approval import (
     LaunchApprovals,
     filter_target_env,
     load_approvals,
+    pin_gateway_part,
     save_pass,
 )
 from kiro_crew.mcp_gateway.launch_resolve import rewrite_kwargs
@@ -380,7 +382,7 @@ from kiro_crew.monitoring.models import (
     MonitorOutcome,
     monitor_state_public_dict,
 )
-from kiro_crew.notifications.bus import MONITOR_CHANNEL
+from kiro_crew.notifications.bus import MONITOR_CHANNEL, payload_from_legacy
 from kiro_crew.parent_turns import ledger_of, note_turn_landed, settle_turn
 from kiro_crew.platform import boot_platform
 from kiro_crew.platform.bootstrap import apply_kas_cli_floor
@@ -745,6 +747,7 @@ class GatewayOrchestrator:
     # The constructor's fields (gateway_runtime/orchestrator_init.py):
     _cfg: KiroCrewConfig
     _no_dashboard: bool
+    _headless: bool
     _no_crons: bool
     _no_open: bool
     _port_override: str | None
@@ -896,6 +899,7 @@ class GatewayOrchestrator:
             cfg: KiroCrewConfig,
             *,
             no_dashboard: bool = False,
+            headless: bool = False,
             no_crons: bool = False,
             no_open: bool = False,
             port_override: str | None = None,
@@ -1150,6 +1154,7 @@ class GatewayOrchestrator:
     _schedule_console_script_repair = _install._schedule_console_script_repair
     _warn_if_kiro_cli_outdated = _install._warn_if_kiro_cli_outdated
     # gateway_runtime/update_schedule.py
+    _in_flight_work_census = _upd_sched._in_flight_work_census
     _in_flight_work_counts = _upd_sched._in_flight_work_counts
     _count_in_flight_work = _upd_sched._count_in_flight_work
     _live_update_handler_tasks = _upd_sched._live_update_handler_tasks

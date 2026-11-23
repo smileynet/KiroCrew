@@ -222,6 +222,10 @@ with no row here.
    * - ``ACP_BACKENDS_FAST_MODE_CONFIG_OPTION``
      - driver-internal (whether the session's advertised ``fast`` switch is read
        and written, by ``AcpProvider.fast_mode_enabled`` / ``set_fast_mode``)
+   * - ``ACP_BACKENDS_APPROVE_FOR_ME``
+     - driver-internal (whether a session may opt into ``approveForMe``: its engine
+       switch, the option's settle and the audit row, by ``acp.kas_approve_for_me``,
+       and the dashboard's approve-for-me route)
    * - ``ACP_BACKENDS_ADVERTISED_MODEL_SELECTION``
      - semantic question (``SessionCapabilities.resolves_model_from_advertised_list``)
    * - ``ACP_BACKENDS_SEED_LOCAL_SETTINGS``
@@ -968,11 +972,12 @@ def apply_selectable_denials(denied: Set[str]) -> FrozenSet[str]:
     counterpart to :func:`register_selectable_backend`: rather than adding a second
     gate somewhere downstream, the ``agent_backend`` governance scope narrows this
     registry (``agent_backend_governance.narrow_selectable_backends``, driven from
-    ``bootstrap_context`` at boot AND from ``policy_distribution.apply_ceiling``
-    whenever a ceiling is installed at runtime). Everything downstream —
-    ``resolve_selected_backend``, the PATCH allowlist, ``GET /api/config/schema``,
-    the provider factory — then reads the narrowed answer with no code of its own,
-    which is what keeps selectability at exactly one gate (harness-parity H4) and
+    ``bootstrap_context`` at each process boot; a ceiling installed at runtime by
+    ``policy_distribution.apply_ceiling`` deliberately does not re-run it).
+    Everything downstream — ``resolve_selected_backend``, the PATCH allowlist,
+    ``GET /api/config/schema``, the provider factory — then reads the narrowed
+    answer with no code of its own, which is what keeps selectability at exactly
+    one gate (harness-parity H4) and
     the Kiro construction path free of an adapter-driven conditional (H13).
 
     ASSIGNS rather than subtracts, so calling it again with a smaller ``denied``
@@ -1420,6 +1425,7 @@ from kiro_crew.agent_sdk.backends_models import (  # noqa: E402,F401 - re-export
     _MODEL_REFUSAL_PHRASE_BY_BACKEND,
     _MODEL_REGISTRY_NAMESPACE_BY_BACKEND,
     ACP_BACKENDS_ADVERTISED_MODEL_SELECTION,
+    ACP_BACKENDS_APPROVE_FOR_ME,
     ACP_BACKENDS_CONFIG_MODEL_SELECT_IS_CANONICAL,
     ACP_BACKENDS_DEFAULT_PSEUDO_MODEL,
     ACP_BACKENDS_EFFORT_AT_LAUNCH,

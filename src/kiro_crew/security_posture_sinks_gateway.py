@@ -1088,11 +1088,30 @@ _GATEWAY_SINKS: tuple[tuple[str, str, str], ...] = (
         "credential scanner then runs over the text, cut to 300 characters.",
     ),
     (
+        "Managed-environment service error text",
+        "managed_env/client.py",
+        "The managed-environment service's own error message, kept on the client's "
+        "error for the caller to show. A 401 or 403 keeps no message; any other has "
+        "the bearer the call sent replaced first, then passes the credential scanner, "
+        "cut to 200 characters.",
+    ),
+    (
         "Browser page text handed to an app",
         "apps/browser_page_port.py",
         "Every string `ctx.browser.page(slot)` returns to an app's backend: the page "
         "outline, a tab's address and title, an op's result or error, the live view's "
         "address and title and a picked element's name. Each passes the "
         "exfiltration-URL and credential redactors whole before any cut to a length.",
+    ),
+    (
+        "The work a restart is waiting on",
+        "work_holders.py",
+        "The names a busy restart idle check lists to the CLI on the gateway "
+        "host: dashboard slot keys and cron job names. Terminal control "
+        "sequences and format characters are dropped, then the active "
+        "credential policy (`redact_via_context`) masks credentials, inside "
+        "URLs too, before the name is cut to 64 characters; a host whose "
+        "policy cannot be composed lists no name. The CLI repeats it on what "
+        "it prints.",
     ),
 )

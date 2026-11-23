@@ -4887,7 +4887,7 @@ comment header per owner. The module-level code these owners hold is re-imported
 | Module | Owns |
 |---|---|
 | `skills_auto_model` | The `auto/` namespace and its on-disk layout, `AutoSkillProvenance` and the generated `SKILL.md` renderer, `ClaimRefusal`, and the pending-queue observer hooks |
-| `skills_discovery` | The skills directory, the packaged and trusted provider roots, the installed package's RECORD admission of a hardlinked `SKILL.md`, screening and adoption of the configured extra roots (`reconfigure`), the tree walk `_iter_skill_files` with its no-follow traversal of a trusted project, and the bounds on how long a walk's answer is served |
+| `skills_discovery` | The skills directory, the packaged and trusted provider roots, the installed package's RECORD admission of a hardlinked `SKILL.md` or packaged built-in skill file (`kiro_crew/builtin_skills/`), screening and adoption of the configured extra roots (`reconfigure`), the tree walk `_iter_skill_files` with its no-follow traversal of a trusted project, and the bounds on how long a walk's answer is served |
 | `skills_builtin_provenance` | The tree fingerprint, the provenance marker, the ownership check (`_verified_unchanged_fingerprint`), `installed_skill_currency`, the released-former-built-in skip it shares with the sync (`_ships_for_released_app`), and the deployed cron-script source verdicts |
 | `skills_builtin_sync` | The packaged-skill sync (`_ensure_builtin_skills`, `sync_builtins`) with its claim, retirement, quarantine and opt-out carry, stale and relocated cleanup (`_RELOCATED_SKILLS`), and `remove_retired_conductor_skill` |
 | `skills_body_reads` | The project trust key and its audit, the enumerated-read choke point (`_read_enumerated_skill_bytes`) and the frontmatter cache, `load_skill` and the global body reader, exact-key reads of the scoped catalog with their paging, and the shapes that mark a tool call as a skill-body read |
@@ -5500,7 +5500,17 @@ also keeps the `RECORD` rows for `.json` files under `kiro_crew/apps/builtins/<a
 which `_installed_builtin_app_file_match` checks for a shipped built-in app's
 `app.json` and the agent specs its manifest declares, never another `.json` the
 `RECORD` lists ([security](security.md)); `_installed_package_bytes_match` admits only
-a path named `SKILL.md`.
+a path named `SKILL.md`. It also keeps the `RECORD` rows for every file under
+`kiro_crew/builtin_skills/`. The built-in skill sync reads the packaged tree through
+them: `skills_builtin_provenance._skill_tree_fingerprint`, when it hashes the
+packaged source (`assume_owner_rwx_dirs`), passes
+`admit_hardlinked=_recorded_bytes_match`, so a hardlinked packaged file counts only
+when its bytes match the digest `RECORD` lists for that exact path. The update
+fingerprint, the provenance marker and the doctor's currency check therefore hold on
+a hardlinked install. The installed copy in the skills dir is always hashed with the
+plain refusal. `skills_builtin_sync._carried_skill_md` reads the packaged `SKILL.md`
+with `admit_hardlinked=_installed_package_bytes_match`, so a carried
+`inject_on_trigger: false` survives an update on such an install.
 Rewriting `RECORD` takes write access to the tree holding the package code, which
 already decides what the gateway runs. Project reads retain descriptor confinement
 and their byte cap.
@@ -5562,9 +5572,13 @@ those trees after session start, and a name with glob characters is never
 written as a `match` entry (it would deny in-scope skills too), so such a skill
 stays offered. Every projection that adds the rules records one
 `kas_skill_scope_denied` security event (source `kas_agent_projection`) naming
-the agent and what the rules keep or deny, at most 40 names per line. Any failure
-adds no rule and logs a warning, so the session starts with KAS's default trees
-rather than not at all. Pinned by `test/test_kas_skill_scope.py`, which models
+the agent and what the rules keep or deny, at most 40 names per line. When the
+scope or its rules cannot be worked out, the session still starts, but with one
+rule that denies every skill except the copies already made; the error is logged
+and, for the session's own agent, the chat shows one notice (a sub-agent target
+gets the same rule and the log line). A failure making the copies only drops the
+copies.
+Pinned by `test/test_kas_skill_scope.py`, which models
 KAS's filter over the payload the harness builds and compares it to the kiro-cli
 scope.
 
@@ -6348,12 +6362,19 @@ exclude). To keep it off the per-message filesystem/config hot path:
   resolve, deduplicate, sort or probe a path: the loader below remains the only authority, and
   a path it declines is skipped there rather than rejected at the save;
 - `extra_paths` is re-resolved by `reconfigure(cfg)` on a config write, running
-  the SAME screening as construction — expanduser, resolve, `is_sensitive_path`
-  reject, existence check — and failing closed per entry, so a root added by hand
-  to `config.json` can no more reach a credential directory than one present at
-  boot. An entry that cannot be resolved at all (an unknown `~user`, an embedded
-  NUL) is skipped with a warning at construction and on reload, never raised, so
-  one bad entry cannot stop the loader. Edition-contributed roots are preserved and stay LAST (lowest
+  the SAME screening as construction (`_screen_extra_paths`) — expanduser, resolve,
+  `is_sensitive_path` reject, existence check — and failing closed per entry, so a
+  root added by hand to `config.json` can no more reach a credential directory than
+  one present at boot. Each skipped entry logs a warning naming its position
+  (`skills.extra_paths[1]`), never its value. An entry that cannot be resolved at
+  all (an unknown `~user`, an embedded NUL) is skipped, never raised, so one bad
+  entry cannot stop the loader; one that is not a directory (a missing folder, or a
+  Windows network share that cannot be reached) is skipped the same way. A root on
+  a slow or network mount blocks the resolve until the mount answers, so gateway
+  start, `kirocrew run` and the eval runner build the loader in a worker thread (it
+  holds no asyncio primitives): the event loop keeps running, and start, the
+  dashboard bind included, still waits for the screening.
+  Edition-contributed roots are preserved and stay LAST (lowest
   precedence): they come from the platform context, not config, so a config write
   must not drop them. The discovery cache is cleared, so the next listing walks
   the new roots instead of serving the old set for the rest of the TTL;
@@ -6823,7 +6844,13 @@ alias was deleted or a symlink retargeted. Repeat calls avoid a re-walk only thr
   and refuses a non-empty directory, so the most it can destroy is a rival's EMPTY
   directory, while skipping it would strand this call's own directory behind a
   permanent 409 — the harm the whole arm exists to prevent. That bound is what makes
-  it the one place a name is removed unverified.
+  it the one place the pinned branch removes a name unverified.
+  The by-name branch (no directory descriptors, e.g. Windows) and `create_auto_skill`
+  share `authoring._write_new_skill_md`: an exclusive `open("x")` whose failure removes
+  `SKILL.md` through `pinned_fs.unlink_verified_by_name` (only while it holds the inode
+  the open created) and then `rmdir`s by name the directory the call made, under the same
+  `rmdir(2)` bound (only while empty), never a parent, before re-raising the original
+  error, so the name can be created again.
 - Path traversal protection: `_safe_name()` rejects `..` and `\` (allows `/` for nesting)
 
 **Foreign-agent import:** only user-authored skills are eligible. Imported
@@ -7028,7 +7055,7 @@ Updates the replacement keeps stay queued beside the newer one, and approving an
 
 `_auto_slug_claim_lock` is an advisory exclusive lock on `skills/.auto-slug-claim.lock` — a dot-prefixed plain file at the skills root, skipped by discovery, placed outside `auto/` so taking it does not create the auto namespace as a side effect of a refused claim. It yields whether the lock was ACQUIRED, and an unacquired lock is a REFUSAL: opening the file can fail on a read-only home, and the acquire can lose within its seconds-long ceiling. Each namespace's claim is additionally an atomic `mkdir(exist_ok=False)`, so a claim lost to a concurrent writer refuses instead of overwriting, but `mkdir` alone cannot make the cross-namespace pair safe because the two paths create different directories.
 
-**Both claim paths return `None` rather than raising or half-succeeding.** `stage_skill_candidate` returns `None` when nothing is queued: an invalid slug, an oversized procedure, an unacquired lock, or no free name across `<slug>` and siblings `<slug>-2..-50`. A `None` means the candidate is NOT on disk and the caller MUST take its rejection branch, because a name returned from a path that wrote nothing is recorded as a staged candidate that does not exist, and the offset advance makes that loss permanent and invisible. `create_auto_skill` and `restore_auto_skill` likewise answer `None` on refusal, which their callers audit as a rejection.
+**Both claim paths return `None` rather than raising or half-succeeding.** `stage_skill_candidate` returns `None` when nothing is queued: an invalid slug, an oversized procedure, an unacquired lock, or no free name across `<slug>` and siblings `<slug>-2..-50`. A `None` means the candidate is NOT on disk and the caller MUST take its rejection branch, because a name returned from a path that wrote nothing is recorded as a staged candidate that does not exist, and the offset advance makes that loss permanent and invisible. `create_auto_skill` and `restore_auto_skill` likewise answer `None` on refusal, which their callers audit as a rejection. A write failure is not a refusal: `create_auto_skill` removes what it made (see `create_skill`'s by-name branch) and re-raises, as `stage_skill_candidate` does.
 
 **One of those refusals is transient, and only that one is retried.** An invalid slug, an oversized procedure and an exhausted sibling walk are properties of the CANDIDATE: refused once, refused forever. An unacquired claim lock is a property of the MOMENT. A caller reading a bare `None` cannot tell them apart, so a claim path also fills in a `ClaimRefusal` when one is supplied, setting `retryable` for the lock case alone.
 
@@ -7881,8 +7908,10 @@ Array-form rules (implemented in `normalize_spec_hooks()`):
 - `trigger` accepts the whole alias table from the trigger alias table in `kiro-team/kiro-agent` (blob `2d4a3127e32e5e81e68d5c2ea406a6a5728f6d78`, `trigger-names.ts` under its hooks package) — twelve canonical triggers with their PascalCase identity rows, the IDE's
   legacy camelCase spellings, the CLI aliases and one Open Plugins legacy alias —
   keyed case-insensitively, which is one deliberate leniency over kiro-agent's
-  own case-sensitive lookup. That blob is the version to re-read when adding a
-  name
+  own case-sensitive lookup. The two compaction triggers, `PreCompact` and
+  `PostCompact` (and their camelCase spellings), come from the same table in the
+  pinned engine 0.66.117's published bundle, for fourteen in all. That blob and
+  that bundle are the ones to re-read when adding a name
 - `action` is `{"type": "command", "command": ...}` or
   `{"type": "agent", "prompt": ...}`; the type must be a string and the payload a
   non-empty string within `_MAX_HOOK_PAYLOAD_LEN`
@@ -7899,9 +7928,13 @@ Array-form rules (implemented in `normalize_spec_hooks()`):
 Left out of the kiro-cli emission, kept in the stored spec — and left out for
 that TRIGGER only, since autoimport still discovers a script in the hooks
 directory on its own unless a suppressed document names it: an `action` of type
-`agent`, the seven triggers kiro-cli has no event name for (`SessionEnd`, `PreTaskExec`,
-`PostTaskExec`, `PostFileCreate`, `PostFileSave`, `PostFileDelete`, `Manual`), and
-the per-hook `name`, `description` and `timeout`. `enabled: false` and
+`agent`, the nine triggers kiro-cli has no event name for (`SessionEnd`, `PreTaskExec`,
+`PostTaskExec`, `PostFileCreate`, `PostFileSave`, `PostFileDelete`, `Manual`,
+`PreCompact`, `PostCompact`), and
+the per-hook `name`, `description` and `timeout`. Crew's own conversion
+(`agent_sdk/spec_hooks._from_documents`) gives a `PreCompact` or `PostCompact`
+document no number, so the other documents' `<agent>/<Event>/<n>` policy names
+are the ones they would have without it. `enabled: false` and
 `confirm: true` are NOT in that class: each grants less execution than the object
 form can express, so either one keeps the hook out of the kiro-cli spec entirely,
 with a log line and a SEL audit naming which. `hook_documents_suppressed_commands()`
@@ -8326,13 +8359,21 @@ re-send the learned-lessons block, the steering resources and the folder
 steering, because a compacted restored transcript may have lost them; it uses
 the post-compaction helpers (`context_assembly/turn.py` → `lessons_parts`,
 `steering_parts`) and their gates, and a minimal turn gets none of them.
+A resume whose transcript was compacted since its last re-injection
+(`needs_reinjection=True`) sends the whole `post_compaction_parts` set instead,
+agent prompt, memory navigation, skills index and reply preferences included. The
+mark that says so survives a restart (`session_compaction_mark.py` owns its
+copy): `mark_needs_reinjection` copies it to the
+session map (`session_map.COMPACTED_FLAG`), `consume_needs_reinjection` reads it
+once per session record, a landed turn (`note_turn_landed`) clears it, and a fresh
+claim (`note_session_head`) drops it.
 A direct `build_session_context(resumed=True)` call only skips thread history;
 it is not the public turn's slim-resume path.
 
 | Block | Slim resume |
 |---|---|
 | Thread history | Native provider history retained; no duplicate block |
-| Memory, skills, agent prompt | No full reinjection |
+| Memory, skills, agent prompt | No full reinjection; re-sent after a compaction |
 | Lessons, steering resources, folder steering | Re-sent under the post-compaction gates |
 | Date, runtime, UI language | Refreshed minimal header |
 | Member essentials/rules | Existing lifecycle delivery retained |
